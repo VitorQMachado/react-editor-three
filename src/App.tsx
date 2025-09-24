@@ -1,26 +1,20 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import logo from './logo.svg';
 import './App.css';
+import { testIsFromPackage, GameManager } from "@vmlibs/unit_three";
+import { loadeGameObjects } from './services';
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    useEffect(() => {
+        console.log(testIsFromPackage());
+
+        const gameManager = new GameManager();
+        loadeGameObjects('wargame').then(data => {
+            data && gameManager?.LoadGameObjectsMap(data);
+        });
+    }, []);
+
+	return null;
 }
 
 export default App;
