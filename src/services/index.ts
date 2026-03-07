@@ -1,5 +1,6 @@
 import axios from "axios";
-import { API_BASE_URL } from "../utils/constants";
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 export const saveGameObjects = (gameObjects: any, saveName?: string) => {
     const headers = { 'Content-Type': 'application/json' };
@@ -13,7 +14,7 @@ export const saveGameObjects = (gameObjects: any, saveName?: string) => {
     });
 }
 
-export const loadeGameObjects = (saveName?: string) => {
+export const loadeGameObjects = (saveName?: string) => {console.log("API URL:", process.env.REACT_APP_API_BASE_URL);
     const headers = { 'Content-Type': 'application/json' };
     return axios.post(`${API_BASE_URL}/load-game-objects`, { saveName }, { headers })
     .then(function (response) {
@@ -25,7 +26,7 @@ export const loadeGameObjects = (saveName?: string) => {
     });
 }
 
-/*  
+/*
 export const getGameComponent = (gameComponent?: GameComponent) => {
     switch (gameComponent?.NAME as GameComponentName) {
         case 'MeshComponent':

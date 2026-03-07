@@ -1,0 +1,11 @@
+.game-object-children-items {
+    margin-left: 10px;
+}
+
+.game-object-item > label {
+    cursor: pointer;
+}
+
+.selected {
+    background-color: aquamarine;
+}
