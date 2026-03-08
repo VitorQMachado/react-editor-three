@@ -40,7 +40,7 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
                     <div className="game-object-children-items">
                         {
                             components.map(component => (
-                                <GameObjectComponent key={`game-object-component-${component.NAME}`} component={component} />
+                                <GameObjectComponent key={`game-object-component-${component.NAME}`} gameComponent={component} />
                             ))
                         }
                     </div>
