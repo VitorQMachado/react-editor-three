@@ -6,9 +6,10 @@ import "./styles.css";
 const GameObjectsListComponent = ({ gameManager }: { gameManager?: GameManager }) => {
     const [gameInitiated, setGameInitiated] = useState(false);
     const [gameObjects, setGameObjects] = useState([]);
-    const [selectedGameObjectName, setSelectedGameObjectName] = useState();
+    const [selectedGameObjectName, setSelectedGameObjectName] = useState<string | undefined>();
 
     useEffect(() => {
+        console.log("🚀 ~ GameObjectsListComponent ~ gameManager:", gameManager)
         if(!gameInitiated && !gameManager) {
             return;
         }
@@ -25,8 +26,8 @@ const GameObjectsListComponent = ({ gameManager }: { gameManager?: GameManager }
             setGameObjects(gameManager?.GetGameObjects());
         });
 
-        emitter.on("selectedGameObject", (gameObject: THREE.Mesh) => {
-            const gameObjectName = gameObject.userData?.gameObjectName;
+        emitter.on("selectedGameObject", (gameObject) => {
+            const gameObjectName = gameObject?.Name;
             console.log("🚀 ~ GameObjectsListComponent ~ gameObjectName:", gameObject, gameObjectName)
             setSelectedGameObjectName(gameObjectName);
         });
@@ -36,7 +37,7 @@ const GameObjectsListComponent = ({ gameManager }: { gameManager?: GameManager }
                 intersects.filter(o => o.object.type === 'Mesh').sort((o1, o2) => o1.distance - o2.distance)
             )
         })
-    }, [gameManager, gameInitiated]);
+    }, []);
 
     const onSelectGameObject = (gameObjectName: string) => {
         console.log("🚀 ~ onSelectGameObject ~ gameObjectName:", gameObjectName)
