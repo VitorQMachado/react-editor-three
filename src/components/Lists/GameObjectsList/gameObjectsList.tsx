@@ -1,4 +1,4 @@
-import { GameManager, GameObject, THREE } from '@vmlibs/unit_three'
+import { GameManager, GameObject } from '@vmlibs/unit_three'
 import { useEffect, useState } from 'react'
 import { loadeGameObjects } from '../../../services';
 import "./styles.css";

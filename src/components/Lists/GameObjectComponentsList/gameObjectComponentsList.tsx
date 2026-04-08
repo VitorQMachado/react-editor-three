@@ -1,4 +1,4 @@
-import { GameComponent, GameManager, GameObject } from '@vmlibs/unit_three'
+import { EventBus, GameComponent, GameManager, GameObject, IGameObjectUpdatedPayload } from '@vmlibs/unit_three'
 import { useEffect, useState } from 'react';
 import { GameObjectComponent } from '../../GameObjectComponents/GameObjectComponent/GameObjectComponent';
 
@@ -13,10 +13,18 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
 
         const { emitter } = gameManager;
         emitter.on("selectedGameObject", (gameObject) => {
-            console.log("🚀 ~ GameObjectComponentsList ~ gameObjectName:", gameObject)
+            console.log("🚀 ~ GameObjectComponentsList ~ ***** gameObjectName:", gameObject)
             setSelectedGameObject(gameObject);
             setComponents(gameObject.GetComponents());
-        })
+        });
+
+        const sub = EventBus.streamTo('gameObject.updated').subscribe((payload: IGameObjectUpdatedPayload) => {
+            console.log('gameObject updated:', payload);
+            setComponents(payload.gameObject?.GetComponents() || []);
+            // update your state here
+        });
+
+        return () => sub.unsubscribe(); // cleanup on unmount
     }, []);
 
     const onSelectItem = (gameObjectName: string) => {

@@ -9,8 +9,9 @@ export const ComponentInputFactory = ({ item }: { item: IFactoryValue }) => {
         setLocal(value);
     }, [value]);
 
-    const commit = () => {
-        if (typeof setValue === 'function') setValue(local);
+    const onChange = (newValue: any) => {
+        setLocal(newValue);
+        if (typeof setValue === 'function') setValue(newValue);
     };
 
     const kind = (() => {
@@ -27,8 +28,7 @@ export const ComponentInputFactory = ({ item }: { item: IFactoryValue }) => {
                 <input
                     type="number"
                     value={local}
-                    onChange={(e) => setLocal(Number((e.target as HTMLInputElement).value))}
-                    onBlur={commit}
+                    onChange={(e) => onChange(Number((e.target as HTMLInputElement).value))}
                     disabled={typeof setValue !== 'function'}
                 />
             );
@@ -38,8 +38,7 @@ export const ComponentInputFactory = ({ item }: { item: IFactoryValue }) => {
                 <input
                     type="text"
                     value={local}
-                    onChange={(e) => setLocal((e.target as HTMLInputElement).value)}
-                    onBlur={commit}
+                    onChange={(e) => onChange((e.target as HTMLInputElement).value)}
                     disabled={typeof setValue !== 'function'}
                 />
             );
@@ -55,9 +54,8 @@ export const ComponentInputFactory = ({ item }: { item: IFactoryValue }) => {
                             onChange={(e) => {
                                 const next = [...(local as any[])];
                                 next[idx] = Number((e.target as HTMLInputElement).value);
-                                setLocal(next);
+                                onChange(next);
                             }}
-                            onBlur={commit}
                             disabled={typeof setValue !== 'function'}
                         />
                     ))}
@@ -73,8 +71,7 @@ export const ComponentInputFactory = ({ item }: { item: IFactoryValue }) => {
                             <input
                                 type="number"
                                 value={local[axis]}
-                                onChange={(e) => setLocal({ ...local, [axis]: Number((e.target as HTMLInputElement).value) })}
-                                onBlur={commit}
+                                onChange={(e) => onChange({ ...local, [axis]: Number((e.target as HTMLInputElement).value) })}
                                 disabled={typeof setValue !== 'function'}
                             />
                         </div>
