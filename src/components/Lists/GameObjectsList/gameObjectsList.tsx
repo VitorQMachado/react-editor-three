@@ -44,34 +44,30 @@ const GameObjectsListComponent = ({ gameManager }: { gameManager?: GameManager }
         gameManager?.SelectGameObjectByName(gameObjectName);
     }
 
-    const RenderGameObjects = ({ gameObjects }: { gameObjects: GameObject[] | undefined }) => {
-        const renderGameObject = (gameObject: GameObject) => {
-            const children = gameObject?.Children;
-            return (
-                <div
-                    key={`game-object-list-${gameObject.Name}`}
-                    className={`game-object-item ${selectedGameObjectName === gameObject.Name ? 'selected' : ''}`}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectGameObject(gameObject.Name);
-                    }}
-                >
-                    <span className="game-object-item__name">{gameObject.Name}</span>
-                    {children && (
-                        <div className="game-object-children-items">
-                            {children?.map((childGameObject) => renderGameObject(childGameObject))}
-                        </div>
-                    )}
-                </div>
-            )
-        }
-
-        return <div className="game-objects-list">{gameObjects?.map((gameObject) => renderGameObject(gameObject))}</div>;
+    const renderGameObject = (gameObject: GameObject) => {
+        const children = gameObject?.Children;
+        return (
+            <div
+                key={`game-object-list-${gameObject.Name}`}
+                className={`game-object-item ${selectedGameObjectName === gameObject.Name ? 'selected' : ''}`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectGameObject(gameObject.Name);
+                }}
+            >
+                <span className="game-object-item__name">{gameObject.Name}</span>
+                {children && (
+                    <div className="game-object-children-items">
+                        {children.map((childGameObject) => renderGameObject(childGameObject))}
+                    </div>
+                )}
+            </div>
+        )
     }
 
 
     return (
-        <RenderGameObjects gameObjects={gameObjects} />
+        <div className="game-objects-list">{gameObjects?.map((gameObject) => renderGameObject(gameObject))}</div>
     )
 }
 
