@@ -1,0 +1,58 @@
+.sidebar-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #1f242a;
+  background: #2b3036;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.sidebar-header__add-button {
+  border: 1px solid #176293;
+  background: linear-gradient(180deg, #2994d6 0%, #1f7db8 100%);
+  color: #ffffff;
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.sidebar-header__add-button:hover {
+  background: linear-gradient(180deg, #2fa3e8 0%, #2487c5 100%);
+}
+
+.sidebar-header__mode-group {
+  display: flex;
+  border: 1px solid #151a1f;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sidebar-header__mode-button {
+  flex: 1;
+  border: 0;
+  padding: 7px 8px;
+  cursor: pointer;
+  background: #20252b;
+  color: #c2ccd7;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.sidebar-header__mode-button + .sidebar-header__mode-button {
+  border-left: 1px solid #151a1f;
+}
+
+.sidebar-header__mode-button:hover {
+  background: #2d343c;
+}
+
+.sidebar-header__mode-button.active {
+  background: linear-gradient(180deg, #3f78be 0%, #305f99 100%);
+  color: #ffffff;
+}

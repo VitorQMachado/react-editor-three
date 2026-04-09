@@ -1,16 +1,37 @@
+.game-objects-list {
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    gap: 2px;
+    max-height: 340px;
+    overflow: auto;
+}
+
+.game-object-item {
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-size: 13px;
+    color: #d5dce3;
+    user-select: none;
+}
+
+.game-object-item:hover {
+    background: #3a414a;
+}
+
+.game-object-item.selected {
+    background: linear-gradient(180deg, #3f78be 0%, #305f99 100%);
+    border-color: #214770;
+    color: #ffffff;
+}
+
+.game-object-item__name {
+    display: inline-block;
+}
+
 .game-object-children-items {
-    margin-left: 10px;
-}
-
-game-object-item {
-    cursor: pointer;
-    background-color: #afafaf;
-}
-
-.game-object-item > label {
-    cursor: pointer;
-}
-
-.selected {
-    background-color: aquamarine;
+    margin-top: 3px;
+    margin-left: 14px;
 }

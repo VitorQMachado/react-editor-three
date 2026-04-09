@@ -1,16 +1,78 @@
-.game-object-children-items {
-    margin-left: 10px;
+.inspector-component {
+    border: 1px solid #1c2127;
+    background: #242a31;
+    border-radius: 6px;
+    overflow: hidden;
 }
 
-game-object-item {
-    cursor: pointer;
-    background-color: #afafaf;
+.inspector-component__title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #aac0d8;
+    background: #1d2228;
+    border-bottom: 1px solid #161b20;
+    padding: 7px 8px;
+    letter-spacing: 0.02em;
 }
 
-.game-object-item > label {
-    cursor: pointer;
+.inspector-component__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
 }
 
-.selected {
-    background-color: aquamarine;
+.inspector-component__field {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 8px;
+    align-items: center;
+}
+
+.inspector-component__field-label {
+    font-size: 12px;
+    color: #a8b1bd;
+    text-transform: capitalize;
+}
+
+.inspector-input {
+    width: 100%;
+    box-sizing: border-box;
+    height: 28px;
+    border: 1px solid #101317;
+    border-radius: 4px;
+    background: #1d2228;
+    color: #e4e8ec;
+    padding: 0 8px;
+    font-size: 12px;
+}
+
+.inspector-input:focus {
+    outline: 1px solid #4a8ed8;
+    border-color: #4a8ed8;
+}
+
+.inspector-array-inputs,
+.inspector-vector-inputs {
+    display: flex;
+    gap: 6px;
+}
+
+.inspector-vector-inputs__axis {
+    flex: 1;
+}
+
+.inspector-vector-inputs__label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: #8f9ca8;
+    margin-bottom: 2px;
+}
+
+.inspector-fallback {
+    margin: 0;
+    white-space: pre-wrap;
+    color: #d2dae2;
+    font-size: 12px;
 }
