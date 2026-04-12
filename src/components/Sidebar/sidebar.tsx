@@ -10,7 +10,7 @@ const SidebarComponent = ({ gameManager }: { gameManager?: GameManager }) => {
             <SidebarHeader gameManager={gameManager} />
 
             <section className="sidebar__panel">
-                <h3 className="sidebar__panel-title">Hierarchy</h3>
+                <h3 className="sidebar__panel-title">Game Objects</h3>
                 <GameObjectsListComponent gameManager={gameManager} />
             </section>
 

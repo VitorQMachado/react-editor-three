@@ -1,20 +1,36 @@
-import { EventBus, GameComponent, GameComponentName, GameManager, GameObject, IGameObjectUpdatedPayload } from '@vmlibs/unit_three'
+import { EventBus } from '@vmlibs/unit_three'
 import { useEffect, useRef, useState } from 'react';
 import { GameObjectComponent } from '../../GameObjectComponents/GameObjectComponent/GameObjectComponent';
 
-const ALL_COMPONENTS: { name: GameComponentName; label: string; description: string }[] = [
+type ComponentName = 'MeshComponent' | 'LightComponent' | 'SkyboxComponent' | 'GrassComponent' | 'RigidBodyComponent' | 'ColliderComponent' | '';
+type GameManagerLike = any;
+type GameObjectLike = any;
+type GameComponentLike = any;
+
+const ALL_COMPONENTS: { name: ComponentName; label: string; description: string }[] = [
     { name: 'MeshComponent',    label: 'Mesh',    description: 'Renders a 3D mesh in the scene' },
     { name: 'LightComponent',   label: 'Light',   description: 'Adds a light source to the scene' },
     { name: 'SkyboxComponent',  label: 'Skybox',  description: 'Applies a skybox environment' },
     { name: 'GrassComponent',   label: 'Grass',   description: 'Renders procedural grass geometry' },
+    { name: 'RigidBodyComponent', label: 'RigidBody', description: 'Adds physics body properties like velocity and gravity' },
+    { name: 'ColliderComponent',  label: 'Collider',  description: 'Adds collision shape for physics interaction' },
 ];
 
-export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameManager }) => {
-    const [selectedGameObject, setSelectedGameObject] = useState<GameObject | undefined>();
-    const [components, setComponents] = useState<GameComponent[] | []>([]);
+type ComponentEventLog = {
+    id: string;
+    category: 'collision' | 'component';
+    label: string;
+    detail: string;
+    time: string;
+};
+
+export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameManagerLike }) => {
+    const [selectedGameObject, setSelectedGameObject] = useState<GameObjectLike | undefined>();
+    const [components, setComponents] = useState<GameComponentLike[] | []>([]);
     const [nameValue, setNameValue] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [search, setSearch] = useState('');
+    const [eventLogs, setEventLogs] = useState<ComponentEventLog[]>([]);
     const searchRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -29,12 +45,49 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
             setNameValue(gameObject?.Name || '');
         });
 
-        const sub = EventBus.streamTo('gameObject.updated').subscribe((payload: IGameObjectUpdatedPayload) => {
+        const sub = EventBus.streamTo('gameObject.updated').subscribe((payload: any) => {
             setComponents(payload.gameObject?.GetComponents() || []);
         });
 
         return () => sub.unsubscribe();
     }, [gameManager]);
+
+    useEffect(() => {
+        const pushEvent = (entry: Omit<ComponentEventLog, 'id' | 'time'>) => {
+            setEventLogs((prev) => [
+                {
+                    ...entry,
+                    id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+                    time: new Date().toLocaleTimeString()
+                },
+                ...prev
+            ].slice(0, 50));
+        };
+
+        const collisionSub = EventBus.streamTo('collision').subscribe((payload: any) => {
+            const event = payload?.event || 'collision';
+            const selfName = payload?.self?.Name || 'Unknown';
+            const otherName = payload?.gameObject?.Name || payload?.other?.Parent?.Name || 'Unknown';
+            pushEvent({ category: 'collision', label: `${selfName} → ${otherName}`, detail: event });
+        });
+
+        const componentSub = EventBus.streamTo('component.updated').subscribe((payload: any) => {
+            const component = payload?.component || 'Unknown';
+            const property = payload?.property || '';
+            const raw = payload?.value;
+            const detail = raw === null || raw === undefined
+                ? 'null'
+                : typeof raw === 'object'
+                    ? JSON.stringify(raw)
+                    : String(raw);
+            pushEvent({ category: 'component', label: `${component}`, detail: property ? `${property}: ${detail}` : detail });
+        });
+
+        return () => {
+            collisionSub.unsubscribe();
+            componentSub.unsubscribe();
+        };
+    }, []);
 
     const openModal = () => {
         setSearch('');
@@ -44,7 +97,7 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
 
     const closeModal = () => setModalOpen(false);
 
-    const handleAddComponent = (componentName: GameComponentName) => {
+    const handleAddComponent = (componentName: ComponentName) => {
         if (!selectedGameObject) return;
         gameManager.AddGameComponent(componentName, {}, selectedGameObject);
         setComponents(selectedGameObject.GetComponents?.() || []);
@@ -100,6 +153,36 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
                     {components.map((component) => (
                         <GameObjectComponent key={`game-object-component-${component.NAME}`} gameComponent={component} />
                     ))}
+                </div>
+
+                <div className="inspector-event-log">
+                    <div className="inspector-event-log__header">
+                        <span>Component Events</span>
+                        <button
+                            type="button"
+                            className="inspector-event-log__clear"
+                            onClick={() => setEventLogs([])}
+                        >
+                            Clear
+                        </button>
+                    </div>
+
+                    {eventLogs.length === 0 ? (
+                        <div className="inspector-event-log__empty">No events yet.</div>
+                    ) : (
+                        <div className="inspector-event-log__list">
+                            {eventLogs.map((log) => (
+                                <div key={log.id} className="inspector-event-log__item">
+                                    <span className={`inspector-event-log__badge inspector-event-log__badge--${log.category}`}>
+                                        {log.category}
+                                    </span>
+                                    <div className="inspector-event-log__label">{log.label}</div>
+                                    <div className="inspector-event-log__detail">{log.detail}</div>
+                                    <div className="inspector-event-log__time">{log.time}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 

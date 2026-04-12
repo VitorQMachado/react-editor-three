@@ -29,6 +29,20 @@
     align-items: center;
 }
 
+.inspector-component__field--xyz {
+    align-items: start;
+}
+
+.inspector-component__xyz-inputs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.inspector-component__xyz-input {
+    min-width: 0;
+}
+
 .inspector-component__field-label {
     font-size: 12px;
     color: #a8b1bd;
@@ -50,6 +64,20 @@
 .inspector-input:focus {
     outline: 1px solid #4a8ed8;
     border-color: #4a8ed8;
+}
+
+.inspector-select {
+    appearance: none;
+    cursor: pointer;
+    padding-right: 24px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%238ea5bf' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 7px center;
+}
+
+.inspector-select option {
+    background: #1d2228;
+    color: #e4e8ec;
 }
 
 .inspector-array-inputs,
@@ -75,4 +103,74 @@
     white-space: pre-wrap;
     color: #d2dae2;
     font-size: 12px;
+}
+
+.inspector-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #d2dae2;
+    font-size: 12px;
+}
+
+.inspector-checkbox input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #4a8ed8;
+}
+
+.inspector-file-picker {
+    display: flex;
+    align-items: center;
+}
+
+.inspector-file-picker__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    border: 1px solid #1f3f63;
+    border-radius: 4px;
+    background: #24466b;
+    color: #d6e7f7;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.inspector-file-picker__button:hover {
+    background: #2d5784;
+}
+
+.inspector-file-picker__button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.inspector-file-picker__button.is-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.inspector-file-picker__input {
+    display: none;
+}
+
+.inspector-texture-map-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.inspector-texture-map-inputs__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inspector-texture-map-inputs__item .inspector-vector-inputs__label {
+    min-width: 40px;
+    margin-bottom: 0;
 }
