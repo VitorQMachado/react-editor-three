@@ -123,6 +123,15 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
         gameManager.SelectGameObjectByName(nextName);
     };
 
+    const handleDeleteSelectedGameObject = () => {
+        const currentName = selectedGameObject?.Name;
+        if (!currentName) return;
+        gameManager.RemoveGameObject(currentName);
+        setSelectedGameObject(undefined);
+        setComponents([]);
+        setNameValue('');
+    };
+
     if (!selectedGameObject) {
         return <div className="inspector-empty">Select a GameObject to inspect and edit it.</div>;
     }
@@ -143,6 +152,14 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
                             if (e.key === 'Enter') applyNameChange();
                         }}
                     />
+                    <button
+                        type="button"
+                        className="inspector-object__delete"
+                        onClick={handleDeleteSelectedGameObject}
+                        title={`Delete ${selectedGameObject.Name}`}
+                    >
+                        ❌
+                    </button>
                 </div>
 
                 <button type="button" className="inspector-object__add-component" onClick={openModal}>
