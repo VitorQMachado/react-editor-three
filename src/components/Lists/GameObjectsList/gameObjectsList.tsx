@@ -1,6 +1,6 @@
 import { GameManager, GameObject } from '@vmlibs/unit_three'
 import { useEffect, useState } from 'react'
-import { loadeGameObjects } from '../../../services';
+import { getStoredLoadJsonName, loadeGameObjects } from '../../../services';
 import "./styles.css";
 
 const GameObjectsListComponent = ({ gameManager }: { gameManager?: GameManager }) => {
@@ -10,13 +10,18 @@ const GameObjectsListComponent = ({ gameManager }: { gameManager?: GameManager }
 
     useEffect(() => {
         console.log("🚀 ~ GameObjectsListComponent ~ gameManager:", gameManager)
-        if(!gameInitiated && !gameManager) {
+        if (!gameManager || gameInitiated) {
             return;
         }
         setGameInitiated(true);
 
-        loadeGameObjects('wargame').then(data => {
-            data && gameManager?.LoadGameObjectsMap(data);
+        loadeGameObjects(getStoredLoadJsonName(), { useStoredOnly: true }).then((data) => {
+            if (data) {
+                console.log("🚀 ~ GameObjectsListComponent ~ loaded data:", data)
+                gameManager.LoadGameObjectsMap(data);
+            }
+        }).catch((err) => {
+            console.error('Auto-load failed:', err);
         });
 
         const { emitter } = gameManager;
@@ -37,7 +42,7 @@ const GameObjectsListComponent = ({ gameManager }: { gameManager?: GameManager }
                 intersects.filter(o => o.object.type === 'Mesh').sort((o1, o2) => o1.distance - o2.distance)
             )
         })
-    }, []);
+    }, [gameManager, gameInitiated]);
 
     const onSelectGameObject = (gameObjectName: string) => {
         console.log("🚀 ~ onSelectGameObject ~ gameObjectName:", gameObjectName)

@@ -1,6 +1,6 @@
 import { GameManager, THREE } from '@vmlibs/unit_three'
 import React, { useEffect, useRef, useState } from 'react'
-import { loadeGameObjects, saveGameObjects, stringifyGameObjectsForSave } from '../../../services'
+import { loadeGameObjects, parseLoadedGameObjectsText, saveGameObjects, stringifyGameObjectsForSave } from '../../../services'
 import './styles.css'
 
 type TransformMode = 'translate' | 'rotate' | 'scale'
@@ -92,15 +92,16 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManager }) => 
 
   const handleLoad = async () => {
     try {
-      const data = await loadeGameObjects(DEFAULT_SAVE_NAME)
+      const data = await loadeGameObjects(undefined, { forcePickJson: true })
       if (data) {
         gameManager.LoadGameObjectsMap(data)
         setSaveLabel('Loaded')
       } else {
-        loadFileInputRef.current?.click()
+        setSaveLabel('Load cancelled')
       }
-    } catch {
-      loadFileInputRef.current?.click()
+    } catch (error: any) {
+      console.error('Load failed:', error)
+      setSaveLabel('Load failed')
     }
     setIsFileMenuOpen(false)
     window.setTimeout(() => setSaveLabel(''), 1800)
@@ -114,11 +115,12 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManager }) => 
 
     try {
       const text = await file.text()
-      const data = JSON.parse(text)
+      const data = parseLoadedGameObjectsText(text)
       gameManager.LoadGameObjectsMap(data)
       setSaveLabel('Loaded')
-    } catch {
-      setSaveLabel('Load failed')
+    } catch (error) {
+      console.error('Load from file failed:', error)
+      setSaveLabel('Invalid save file')
     }
 
     event.target.value = ''
