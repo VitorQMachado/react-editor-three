@@ -32,6 +32,9 @@ const serializeValue = (value: any, seen = new WeakSet()): any => {
     }
 
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        if (typeof value === 'string' && value.startsWith('blob:')) {
+            return blobToOriginalPath.get(value) ?? value;
+        }
         return value;
     }
 
@@ -184,6 +187,18 @@ export const parseLoadedGameObjectsText = (text: string) => {
 };
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg']);
+const blobToOriginalPath = new Map<string, string>();
+
+export const registerBlobOriginalPath = (blobUrl: string, originalPath: string) => {
+    blobToOriginalPath.set(blobUrl, originalPath);
+};
+
+export const getOriginalPathForBlob = (value: string) => {
+    if (typeof value !== 'string' || !value.startsWith('blob:')) {
+        return value;
+    }
+    return blobToOriginalPath.get(value) || value;
+};
 const SAVED_FOLDER_DB = 'react-editor-three-fs';
 const SAVED_FOLDER_STORE = 'handles';
 const SAVED_FOLDER_KEY = 'last-load-directory';
@@ -236,7 +251,9 @@ const findImageUrlForPath = async (originalPath: string, imageFileMap: Map<strin
             matchedCandidate: candidate,
             resolvedFileName: file.name
         });
-        return URL.createObjectURL(file);
+        const blobUrl = URL.createObjectURL(file);
+        blobToOriginalPath.set(blobUrl, originalPath);
+        return blobUrl;
     }
 
     console.warn('[load-texture] missing', {
@@ -565,6 +582,17 @@ export const getStoredLoadJsonName = () => {
     } catch {
         return undefined;
     }
+};
+
+export const pickProjectFolder = async (): Promise<string> => {
+    const picked = await (window as any).showDirectoryPicker({ mode: 'read' });
+    await storeHandleByKey(SAVED_FOLDER_KEY, picked as FileSystemDirectoryHandle);
+    try {
+        localStorage.setItem('react-editor-three:last-load-folder-name', (picked as FileSystemDirectoryHandle).name);
+    } catch {
+        // non-critical if localStorage is unavailable
+    }
+    return (picked as FileSystemDirectoryHandle).name;
 };
 
 export const saveGameObjects = async (gameObjects: any, saveName?: string): Promise<{ success: boolean } | undefined> => {

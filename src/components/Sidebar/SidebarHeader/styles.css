@@ -130,3 +130,25 @@
   background: linear-gradient(180deg, #3f78be 0%, #305f99 100%);
   color: #ffffff;
 }
+
+.sidebar-header__fps-button {
+  border: 1px solid #151a1f;
+  background: #20252b;
+  color: #c2ccd7;
+  padding: 7px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.sidebar-header__fps-button:hover {
+  background: #2d343c;
+}
+
+.sidebar-header__fps-button.active {
+  background: linear-gradient(180deg, #3f78be 0%, #305f99 100%);
+  color: #ffffff;
+}

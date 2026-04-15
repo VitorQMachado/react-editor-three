@@ -9,14 +9,15 @@ const SidebarComponent = ({ gameManager }: { gameManager?: GameManager }) => {
         <aside className="sidebar">
             <SidebarHeader gameManager={gameManager} />
 
-            <section className="sidebar__panel">
-                <h3 className="sidebar__panel-title">Game Objects</h3>
-                <GameObjectsListComponent gameManager={gameManager} />
-            </section>
 
             <section className="sidebar__panel sidebar__panel--inspector">
                 <h3 className="sidebar__panel-title">Inspector</h3>
                 <GameObjectComponentsList gameManager={gameManager} />
+            </section>
+
+            <section className="sidebar__panel">
+                <h3 className="sidebar__panel-title">Game Objects</h3>
+                <GameObjectsListComponent gameManager={gameManager} />
             </section>
         </aside>
     )

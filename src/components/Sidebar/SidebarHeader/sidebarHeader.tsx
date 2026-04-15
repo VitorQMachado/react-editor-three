@@ -1,17 +1,27 @@
-import { GameManager, THREE } from '@vmlibs/unit_three'
+import { THREE } from '@vmlibs/unit_three'
 import React, { useEffect, useRef, useState } from 'react'
-import { loadeGameObjects, parseLoadedGameObjectsText, saveGameObjects, stringifyGameObjectsForSave } from '../../../services'
+import { loadeGameObjects, parseLoadedGameObjectsText, pickProjectFolder, saveGameObjects, stringifyGameObjectsForSave } from '../../../services'
 import './styles.css'
 
+type GameManagerLike = any
 type TransformMode = 'translate' | 'rotate' | 'scale'
 type CreatePreset = 'default' | 'sphere' | 'cube' | 'plane'
 const DEFAULT_SAVE_NAME = 'wargame'
+const PROJECT_NAME_KEY = 'react-editor-three:project-name'
 
-export const SidebarHeader = ({ gameManager }: { gameManager: GameManager }) => {
+export const SidebarHeader = ({ gameManager }: { gameManager: GameManagerLike }) => {
   const [transformMode, setTransformMode] = useState<TransformMode>('translate')
+  const [isFpsVisible, setIsFpsVisible] = useState(false)
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false)
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false)
   const [saveLabel, setSaveLabel] = useState('')
+  const [projectName, setProjectName] = useState(() => {
+    try {
+      return localStorage.getItem(PROJECT_NAME_KEY) || DEFAULT_SAVE_NAME
+    } catch {
+      return DEFAULT_SAVE_NAME
+    }
+  })
   const loadFileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -49,7 +59,6 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManager }) => 
           } else if (preset === 'plane') {
             mesh.geometry.dispose()
             mesh.geometry = new THREE.PlaneGeometry(2, 2, 20, 20)
-            mesh.rotation.x = -Math.PI / 2
           }
           mesh.material.needsUpdate = true
         }
@@ -65,17 +74,96 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManager }) => 
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = `${DEFAULT_SAVE_NAME}.json`
+    anchor.download = `${projectName}.json`
     document.body.appendChild(anchor)
     anchor.click()
     document.body.removeChild(anchor)
     URL.revokeObjectURL(url)
   }
 
+  const handleNewProject = async () => {
+    const enteredName = window.prompt('Project name', projectName || DEFAULT_SAVE_NAME)
+    const trimmedName = (enteredName || '').trim()
+
+    if (!trimmedName) {
+      setSaveLabel('Project creation cancelled')
+      setIsFileMenuOpen(false)
+      window.setTimeout(() => setSaveLabel(''), 1800)
+      return
+    }
+
+    try {
+      const folderName = await pickProjectFolder()
+
+      try {
+        localStorage.setItem(PROJECT_NAME_KEY, trimmedName)
+      } catch {
+        // non-critical if localStorage is unavailable
+      }
+
+      setProjectName(trimmedName)
+
+      const lightObjectName = 'Directional Light'
+
+      gameManager.LoadGameObjectsMap({
+        [trimmedName]: {
+          id: 1,
+          name: trimmedName,
+          components: {},
+          parent: {},
+          active: true,
+          destroyed: false,
+          position: { x: 0, y: 0, z: 0 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          transform: { elements: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] },
+          worldTransform: { elements: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] }
+        },
+        [lightObjectName]: {
+          id: 2,
+          name: lightObjectName,
+          components: {
+            LightComponent: {
+              name: 'LightComponent',
+              options: {
+                type: 'DirectionalLight',
+                intensity: 1,
+                distance: 0,
+                texture: '',
+                position: { x: 5, y: 5, z: 5 },
+                rotation: { x: 0, y: 0, z: 0 },
+                scale: { x: 1, y: 1, z: 1 }
+              }
+            }
+          },
+          parent: { name: trimmedName },
+          active: true,
+          destroyed: false,
+          position: { x: 5, y: 5, z: 5 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          transform: { elements: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 5, 5, 5, 1] },
+          worldTransform: { elements: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 5, 5, 5, 1] }
+        }
+      })
+      gameManager.SelectGameObjectByName(trimmedName)
+
+      setSaveLabel(`Project: ${trimmedName} (${folderName})`)
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        setSaveLabel('Project creation cancelled')
+      } else {
+        console.error('New project failed:', error)
+        setSaveLabel('New project failed')
+      }
+    }
+
+    setIsFileMenuOpen(false)
+    window.setTimeout(() => setSaveLabel(''), 2200)
+  }
+
   const handleSave = async () => {
     const gameObjects = gameManager.SaveGameObject()
     try {
-      const result = await saveGameObjects(gameObjects, DEFAULT_SAVE_NAME)
+      const result = await saveGameObjects(gameObjects, projectName)
       if (result) {
         setSaveLabel('Saved')
       } else {
@@ -132,6 +220,12 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManager }) => 
     gameManager.transformControls?.setMode(mode)
   }
 
+  const handleToggleFps = () => {
+    const nextVisible = !isFpsVisible
+    setIsFpsVisible(nextVisible)
+    ;(gameManager as any)?.setFpsVisible?.(nextVisible)
+  }
+
   return (
     <div className="sidebar-header">
       <input
@@ -159,11 +253,14 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManager }) => 
 
           {isFileMenuOpen && (
             <div className="sidebar-header__menu-panel" role="menu" aria-label="File menu">
+              <button type="button" className="sidebar-header__menu-item" onClick={handleNewProject}>
+                New Project
+              </button>
               <button type="button" className="sidebar-header__menu-item" onClick={handleLoad}>
-                Load
+                Load Project
               </button>
               <button type="button" className="sidebar-header__menu-item" onClick={handleSave}>
-                Save
+                Save Project
               </button>
             </div>
           )}
@@ -227,6 +324,14 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManager }) => 
           Scale
         </button>
       </div>
+
+      <button
+        type="button"
+        className={`sidebar-header__fps-button ${isFpsVisible ? 'active' : ''}`}
+        onClick={handleToggleFps}
+      >
+        FPS: {isFpsVisible ? 'ON' : 'OFF'}
+      </button>
     </div>
   )
 }

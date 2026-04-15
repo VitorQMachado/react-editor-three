@@ -1,46 +1,129 @@
-# Getting Started with Create React App
+# React Editor Three
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Unity-inspired game scene editor built with React and Three.js.
 
-## Available Scripts
+This project provides a browser-based editor workflow similar to a lightweight Unity-style inspector:
 
-In the project directory, you can run:
+- Scene viewport powered by Three.js
+- Hierarchy and inspector panels
+- GameObject and Component editing
+- Project-based JSON load/save
+- Runtime texture remapping from local files
 
-### `npm start`
+## Overview
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+React Editor Three is designed for fast iteration on game scenes in the browser. It combines:
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+- React UI for editor tooling
+- Three.js rendering through `@vmlibs/unit_three`
+- JSON serialization for scene persistence
+- Local file system integration for loading/saving project data
 
-### `npm test`
+The editor follows common game engine patterns:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Hierarchy (Game Objects list)
+- Inspector (Component properties)
+- Scene controls (move/rotate/scale, FPS toggle)
 
-### `npm run build`
+## Main Features
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- New Project workflow with project name + folder selection
+- Load Project / Save Project actions from the File menu
+- Auto-load support using previously granted folder access
+- Inspector editing for components such as:
+	- Mesh
+	- Light
+	- Skybox
+	- Collider
+	- RigidBody
+- Texture reference preservation in JSON (stores paths, not runtime blob URLs)
+- Skybox texture editing from inspector
+- Rotation editing in degrees in the inspector UI
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Tech Stack
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- React 19
+- TypeScript
+- Three.js (via `@vmlibs/unit_three`)
+- Create React App toolchain
 
-### `npm run eject`
+## Getting Started
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+### Prerequisites
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- Node.js 18+
+- npm
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+### Install
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+```bash
+npm install
+```
 
-## Learn More
+### Run in Development
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+npm start
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+By default, the app runs on:
+
+- http://localhost:3001
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+### Run Tests
+
+```bash
+npm test
+```
+
+## Project Structure
+
+```text
+src/
+	components/
+		Editor/
+		GameScreen/
+		Sidebar/
+		Lists/
+		GameObjectComponents/
+	services/
+	utils/
+```
+
+Key areas:
+
+- `components/Editor`: main editor shell
+- `components/GameScreen`: Three.js viewport bootstrap
+- `components/Sidebar`: file/actions, inspector, hierarchy
+- `services`: load/save and file-system handling
+
+## How Persistence Works
+
+- Scenes are saved as JSON maps of GameObjects and Components.
+- Texture values are stored as file references in JSON.
+- During load, references are remapped to browser object URLs for runtime rendering.
+
+This keeps saved data portable while preserving live rendering behavior.
+
+## Roadmap Ideas
+
+- Undo/redo stack
+- Prefab support
+- Better material editor
+- Scene gizmo improvements
+- Play mode simulation controls
+
+## Contributing
+
+Contributions are welcome. Please open an issue or submit a PR with a clear description of the change.
+
+## Author
+
+Vitor de Queiroz Machado
+

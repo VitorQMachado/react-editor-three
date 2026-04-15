@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { getOriginalPathForBlob, registerBlobOriginalPath } from '../../../services';
 
 type FactoryValue = {
     name: string;
@@ -33,16 +34,27 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
     const isTextureField = /texture/i.test(name || '');
 
     const toTextureValue = (file: File) => {
-        return URL.createObjectURL(file);
+        const blobUrl = URL.createObjectURL(file);
+        registerBlobOriginalPath(blobUrl, file.name);
+        return blobUrl;
     };
 
     const extractFileName = (textureValue: unknown) => {
         if (typeof textureValue !== 'string') {
             return '';
         }
-        const normalized = textureValue.split('?')[0].replace(/\\/g, '/');
+        const resolvedValue = getOriginalPathForBlob(textureValue);
+        const normalized = resolvedValue.split('?')[0].replace(/\\/g, '/');
         const fileName = normalized.substring(normalized.lastIndexOf('/') + 1);
         return fileName === 'blob' ? '' : fileName;
+    };
+
+    const extractTextureReference = (textureValue: unknown) => {
+        if (typeof textureValue !== 'string') {
+            return '';
+        }
+        const resolvedValue = getOriginalPathForBlob(textureValue);
+        return resolvedValue.startsWith('blob:') ? '' : resolvedValue;
     };
 
     const renderTextureFileButton = (
@@ -132,6 +144,7 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
             if (isTextureField) {
                 const buttonLabel =
                     selectedTextureName ||
+                    extractTextureReference(local) ||
                     extractFileName(local) ||
                     'Add';
 

@@ -99,7 +99,19 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
 
     const handleAddComponent = (componentName: ComponentName) => {
         if (!selectedGameObject) return;
-        gameManager.AddGameComponent(componentName, {}, selectedGameObject);
+        const defaultOptionsByComponent: Record<string, any> = {
+            SkyboxComponent: {
+                texture: 'img/textures/blade_diffuse.jpg',
+                size: 150,
+                position: { x: 0, y: 0, z: 0 }
+            }
+        };
+
+        const componentData = {
+            options: defaultOptionsByComponent[componentName] || {}
+        };
+
+        gameManager.AddGameComponent(componentName, componentData, selectedGameObject);
         setComponents(selectedGameObject.GetComponents?.() || []);
         closeModal();
     };

@@ -1,12 +1,117 @@
 import ComponentInputFactory from './ComponentInputFactory';
+import { getOriginalPathForBlob } from '../../../services';
 import './styles.css';
+
+const RAD_TO_DEG = 180 / Math.PI;
+const DEG_TO_RAD = Math.PI / 180;
+
+const isRotationAxisItem = (name: string) => /rotation/i.test(name) && /\s[XYZ]$/i.test(name);
 
 export const GameObjectComponent = ({ gameComponent }: { gameComponent: any }) => {
     const factory = gameComponent?.Factory;
     const rawList: any[] = factory?.valuesList || [];
+    const lightTypeOptions = ['DirectionalLight', 'PointLight', 'SpotLight', 'AmbientLight', 'HemisphereLight', 'RectAreaLight'];
 
     const valuesList = rawList.map((item) => {
         const itemName = item.name || '';
+        if (gameComponent.NAME === 'LightComponent' && /^Type$/i.test(itemName)) {
+            const setLightType = (nextType: string) => {
+                let updated = false;
+
+                if (typeof item.setValue === 'function') {
+                    item.setValue(nextType);
+                    updated = true;
+                }
+
+                // Fallback for LightComponent implementations that expose mutable options but no setValue.
+                const optionTargets = [
+                    gameComponent?.options,
+                    gameComponent?.Options,
+                    gameComponent?.params,
+                    gameComponent?.Params,
+                    gameComponent?.data?.options,
+                    gameComponent?.Data?.options
+                ];
+
+                optionTargets.forEach((target) => {
+                    if (target && typeof target === 'object' && 'type' in target) {
+                        (target as any).type = nextType;
+                        updated = true;
+                    }
+                });
+
+                if (!updated) {
+                    console.warn('[inspector-light] unable to set Light type: no writable setter/target found', {
+                        itemName,
+                        nextType
+                    });
+                    return;
+                }
+
+                const manager = gameComponent?.Manager;
+                manager?.emitter?.emit?.('transformControl-change');
+                manager?.emitter?.emit?.('updatedGameObject', gameComponent?.Parent);
+                manager?.emitter?.emit?.('component.updated', {
+                    component: gameComponent?.NAME,
+                    property: 'type',
+                    value: nextType
+                });
+            };
+
+            return {
+                ...item,
+                options: lightTypeOptions,
+                optionLabels: lightTypeOptions,
+                setValue: setLightType
+            };
+        }
+
+        if (gameComponent.NAME === 'SkyboxComponent' && /^Textures$/i.test(itemName)) {
+            const setSkyboxTextures = (nextTextures: Record<string, string>) => {
+                const normalizedTextures = Object.entries(nextTextures || {}).reduce((acc, [key, texturePath]) => {
+                    acc[key] = getOriginalPathForBlob(String(texturePath || ''));
+                    return acc;
+                }, {} as Record<string, string>);
+
+                if (typeof item.setValue === 'function') {
+                    item.setValue(normalizedTextures);
+                }
+
+                const params = gameComponent?.params || {};
+                params.options = {
+                    ...(params.options || {}),
+                    textures: normalizedTextures
+                };
+                if (!params.parentMesh && gameComponent?.Manager?.scene) {
+                    params.parentMesh = gameComponent.Manager.scene;
+                }
+
+                if (typeof gameComponent?.loadSkybox === 'function') {
+                    gameComponent.loadSkybox(params);
+                }
+
+                const manager = gameComponent?.Manager;
+                // Do NOT emit 'transformControl-change' here: loadSkybox replaces the mesh,
+                // so the old object is detached from the scene and TransformControls would
+                // throw "The attached 3D object must be a part of the scene graph".
+                manager?.emitter?.emit?.('updatedGameObject', gameComponent?.Parent);
+                manager?.emitter?.emit?.('component.updated', {
+                    component: gameComponent?.NAME,
+                    property: 'Textures',
+                    value: normalizedTextures
+                });
+            };
+
+            return {
+                ...item,
+                value: Object.entries(item.value || {}).reduce((acc, [key, texturePath]) => {
+                    acc[key] = getOriginalPathForBlob(String(texturePath || ''));
+                    return acc;
+                }, {} as Record<string, string>),
+                setValue: setSkyboxTextures
+            };
+        }
+
         const isColliderBoundField = /^Size [XYZ]$/i.test(itemName) || /^Radius$/i.test(itemName) || /^Offset [XYZ]$/i.test(itemName);
         if (
             gameComponent.NAME === 'ColliderComponent' &&
@@ -26,6 +131,17 @@ export const GameObjectComponent = ({ gameComponent }: { gameComponent: any }) =
                 }
             };
         }
+
+        if (isRotationAxisItem(itemName)) {
+            return {
+                ...item,
+                value: typeof item.value === 'number' ? item.value * RAD_TO_DEG : item.value,
+                setValue: typeof item.setValue === 'function'
+                    ? (deg: number) => item.setValue!(deg * DEG_TO_RAD)
+                    : undefined
+            };
+        }
+
         return item;
     });
 
