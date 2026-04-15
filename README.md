@@ -10,6 +10,8 @@ This project provides a browser-based editor workflow similar to a lightweight U
 - Project-based JSON load/save
 - Runtime texture remapping from local files
 
+  <img width="1598" height="896" alt="Screenshot 2026-04-15 142757" src="https://github.com/user-attachments/assets/9c5c7676-7f6e-4572-b34d-af34bdfc545d" />
+
 ## Overview
 
 React Editor Three is designed for fast iteration on game scenes in the browser. It combines:
