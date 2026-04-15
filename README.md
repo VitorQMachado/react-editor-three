@@ -17,7 +17,7 @@ This project provides a browser-based editor workflow similar to a lightweight U
 React Editor Three is designed for fast iteration on game scenes in the browser. It combines:
 
 - React UI for editor tooling
-- Three.js rendering through `@vmlibs/unit_three`
+- Three.js rendering through my custom lib `@vmlibs/unit_three` (to create the Game Objects stricture)
 - JSON serialization for scene persistence
 - Local file system integration for loading/saving project data
 
@@ -46,7 +46,7 @@ The editor follows common game engine patterns:
 
 - React 19
 - TypeScript
-- Three.js (via `@vmlibs/unit_three`)
+- Three.js (via my custom lib `@vmlibs/unit_three`)
 - Create React App toolchain
 
 ## Getting Started
