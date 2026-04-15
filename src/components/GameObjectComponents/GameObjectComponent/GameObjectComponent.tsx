@@ -68,19 +68,28 @@ export const GameObjectComponent = ({ gameComponent }: { gameComponent: any }) =
 
         if (gameComponent.NAME === 'SkyboxComponent' && /^Textures$/i.test(itemName)) {
             const setSkyboxTextures = (nextTextures: Record<string, string>) => {
-                const normalizedTextures = Object.entries(nextTextures || {}).reduce((acc, [key, texturePath]) => {
-                    acc[key] = getOriginalPathForBlob(String(texturePath || ''));
+                const runtimeTextures = Object.entries(nextTextures || {}).reduce((acc, [key, texturePath]) => {
+                    acc[key] = String(texturePath || '');
                     return acc;
                 }, {} as Record<string, string>);
 
+                console.log('[skybox] updated textures', {
+                    gameObject: gameComponent?.Parent?.Name,
+                    runtimeTextures,
+                    sourceTextures: Object.entries(runtimeTextures).reduce((acc, [key, texturePath]) => {
+                        acc[key] = getOriginalPathForBlob(texturePath);
+                        return acc;
+                    }, {} as Record<string, string>)
+                });
+
                 if (typeof item.setValue === 'function') {
-                    item.setValue(normalizedTextures);
+                    item.setValue(runtimeTextures);
                 }
 
                 const params = gameComponent?.params || {};
                 params.options = {
                     ...(params.options || {}),
-                    textures: normalizedTextures
+                    textures: runtimeTextures
                 };
                 if (!params.parentMesh && gameComponent?.Manager?.scene) {
                     params.parentMesh = gameComponent.Manager.scene;
@@ -98,16 +107,16 @@ export const GameObjectComponent = ({ gameComponent }: { gameComponent: any }) =
                 manager?.emitter?.emit?.('component.updated', {
                     component: gameComponent?.NAME,
                     property: 'Textures',
-                    value: normalizedTextures
+                    value: Object.entries(runtimeTextures).reduce((acc, [key, texturePath]) => {
+                        acc[key] = getOriginalPathForBlob(texturePath);
+                        return acc;
+                    }, {} as Record<string, string>)
                 });
             };
 
             return {
                 ...item,
-                value: Object.entries(item.value || {}).reduce((acc, [key, texturePath]) => {
-                    acc[key] = getOriginalPathForBlob(String(texturePath || ''));
-                    return acc;
-                }, {} as Record<string, string>),
+                value: item.value || {},
                 setValue: setSkyboxTextures
             };
         }

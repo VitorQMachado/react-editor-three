@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getOriginalPathForBlob, registerBlobOriginalPath } from '../../../services';
+import { fileToBlobUrl, getOriginalPathForBlob } from '../../../services';
 
 type FactoryValue = {
     name: string;
@@ -31,12 +31,10 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
         disabled: typeof setValue !== 'function'
     };
 
-    const isTextureField = /texture/i.test(name || '');
+    const isTextureField = /\b(texture|textures|map|maps)\b/i.test(name || '');
 
     const toTextureValue = (file: File) => {
-        const blobUrl = URL.createObjectURL(file);
-        registerBlobOriginalPath(blobUrl, file.name);
-        return blobUrl;
+        return fileToBlobUrl(file, file.name);
     };
 
     const extractFileName = (textureValue: unknown) => {
@@ -222,6 +220,12 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
                             <label className="inspector-vector-inputs__label">{key}</label>
                             {renderTextureFileButton(
                                 (fileUrl, fileName) => {
+                                    if (/^Textures$/i.test(name || '')) {
+                                        console.log('[skybox] selected texture', {
+                                            skyboxFace: key,
+                                            realFileName: fileName
+                                        });
+                                    }
                                     setSelectedTextureNamesByKey((prev) => ({ ...prev, [key]: fileName }));
                                     onChange({ ...local, [key]: fileUrl });
                                 },

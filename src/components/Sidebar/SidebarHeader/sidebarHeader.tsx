@@ -5,7 +5,7 @@ import './styles.css'
 
 type GameManagerLike = any
 type TransformMode = 'translate' | 'rotate' | 'scale'
-type CreatePreset = 'default' | 'sphere' | 'cube' | 'plane'
+type CreatePreset = 'default' | 'sphere' | 'cube' | 'plane' | 'skybox'
 const DEFAULT_SAVE_NAME = 'wargame'
 const PROJECT_NAME_KEY = 'react-editor-three:project-name'
 
@@ -36,12 +36,27 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManagerLike })
     const gameObjectName = `${suffix}-${Date.now()}`
     gameManager.AddNewGameObject(gameObjectName)
 
+    if (preset === 'skybox') {
+      const created = gameManager.GetGameObjectByName(gameObjectName)
+      if (created) {
+        gameManager.AddGameComponent('SkyboxComponent', {
+          options: {
+            size: 150,
+            position: { x: 0, y: 0, z: 0 }
+          }
+        }, created)
+      }
+
+      gameManager.SelectGameObjectByName(gameObjectName)
+      setIsAddMenuOpen(false)
+      return
+    }
+
     if (preset !== 'default') {
       const created = gameManager.GetGameObjectByName(gameObjectName)
       if (created) {
         gameManager.AddGameComponent('MeshComponent', {
           options: {
-            texture: 'img/textures/blade_diffuse.jpg',
             width: 1,
             height: 1,
             position: { x: 0, y: 0.5, z: 0 }
@@ -293,6 +308,9 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManagerLike })
             </button>
             <button type="button" className="sidebar-header__menu-item" onClick={() => createWithPreset('plane')}>
               Plane
+            </button>
+            <button type="button" className="sidebar-header__menu-item" onClick={() => createWithPreset('skybox')}>
+              Skybox
             </button>
           </div>
         )}

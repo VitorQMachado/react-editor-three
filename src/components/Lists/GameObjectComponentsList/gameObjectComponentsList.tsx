@@ -1,4 +1,4 @@
-import { EventBus } from '@vmlibs/unit_three'
+import { EventStream } from '@vmlibs/unit_three'
 import { useEffect, useRef, useState } from 'react';
 import { GameObjectComponent } from '../../GameObjectComponents/GameObjectComponent/GameObjectComponent';
 
@@ -45,7 +45,7 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
             setNameValue(gameObject?.Name || '');
         });
 
-        const sub = EventBus.streamTo('gameObject.updated').subscribe((payload: any) => {
+        const sub = EventStream.streamTo('gameObject.updated').subscribe((payload: any) => {
             setComponents(payload.gameObject?.GetComponents() || []);
         });
 
@@ -64,14 +64,14 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
             ].slice(0, 50));
         };
 
-        const collisionSub = EventBus.streamTo('collision').subscribe((payload: any) => {
+        const collisionSub = EventStream.streamTo('collision').subscribe((payload: any) => {
             const event = payload?.event || 'collision';
             const selfName = payload?.self?.Name || 'Unknown';
             const otherName = payload?.gameObject?.Name || payload?.other?.Parent?.Name || 'Unknown';
             pushEvent({ category: 'collision', label: `${selfName} → ${otherName}`, detail: event });
         });
 
-        const componentSub = EventBus.streamTo('component.updated').subscribe((payload: any) => {
+        const componentSub = EventStream.streamTo('component.updated').subscribe((payload: any) => {
             const component = payload?.component || 'Unknown';
             const property = payload?.property || '';
             const raw = payload?.value;
@@ -101,7 +101,7 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
         if (!selectedGameObject) return;
         const defaultOptionsByComponent: Record<string, any> = {
             SkyboxComponent: {
-                texture: 'img/textures/blade_diffuse.jpg',
+                texture: '',
                 size: 150,
                 position: { x: 0, y: 0, z: 0 }
             }

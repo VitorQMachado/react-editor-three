@@ -189,6 +189,15 @@ export const parseLoadedGameObjectsText = (text: string) => {
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg']);
 const blobToOriginalPath = new Map<string, string>();
 
+export const fileToBlobUrl = (file: File, originalPath?: string) => {
+    const blobUrl = URL.createObjectURL(file);
+    const normalizedOriginalPath = String(originalPath || file.name || '').trim();
+    if (normalizedOriginalPath) {
+        blobToOriginalPath.set(blobUrl, normalizedOriginalPath);
+    }
+    return blobUrl;
+};
+
 export const registerBlobOriginalPath = (blobUrl: string, originalPath: string) => {
     blobToOriginalPath.set(blobUrl, originalPath);
 };
@@ -233,7 +242,11 @@ const stripCommonPrefixes = (pathValue: string) => {
     ];
 };
 
-const findImageUrlForPath = async (originalPath: string, imageFileMap: Map<string, FileSystemFileHandle>) => {
+const findImageUrlForPath = async (
+    originalPath: string,
+    imageFileMap: Map<string, FileSystemFileHandle>,
+    propertyPath: Array<string | number> = []
+) => {
     const candidates = stripCommonPrefixes(originalPath);
     const fileName = normalizePath(originalPath).split('/').pop();
     if (fileName) {
@@ -251,9 +264,7 @@ const findImageUrlForPath = async (originalPath: string, imageFileMap: Map<strin
             matchedCandidate: candidate,
             resolvedFileName: file.name
         });
-        const blobUrl = URL.createObjectURL(file);
-        blobToOriginalPath.set(blobUrl, originalPath);
-        return blobUrl;
+        return fileToBlobUrl(file, originalPath);
     }
 
     console.warn('[load-texture] missing', {
@@ -263,14 +274,18 @@ const findImageUrlForPath = async (originalPath: string, imageFileMap: Map<strin
     return originalPath;
 };
 
-const remapTexturePaths = async (payload: any, imageFileMap: Map<string, FileSystemFileHandle>): Promise<any> => {
+const remapTexturePaths = async (
+    payload: any,
+    imageFileMap: Map<string, FileSystemFileHandle>,
+    propertyPath: Array<string | number> = []
+): Promise<any> => {
     if (payload === null || payload === undefined) {
         return payload;
     }
 
     if (typeof payload === 'string') {
         if (isImagePath(payload)) {
-            return findImageUrlForPath(payload, imageFileMap);
+            return findImageUrlForPath(payload, imageFileMap, propertyPath);
         }
         return payload;
     }
@@ -280,13 +295,15 @@ const remapTexturePaths = async (payload: any, imageFileMap: Map<string, FileSys
     }
 
     if (Array.isArray(payload)) {
-        const remappedArray = await Promise.all(payload.map((item) => remapTexturePaths(item, imageFileMap)));
+        const remappedArray = await Promise.all(
+            payload.map((item, index) => remapTexturePaths(item, imageFileMap, [...propertyPath, index]))
+        );
         return remappedArray;
     }
 
     const remappedObject: Record<string, any> = {};
     for (const [key, value] of Object.entries(payload)) {
-        remappedObject[key] = await remapTexturePaths(value, imageFileMap);
+        remappedObject[key] = await remapTexturePaths(value, imageFileMap, [...propertyPath, key]);
     }
 
     return remappedObject;
