@@ -1,179 +1,179 @@
 .sidebar-header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border: 1px solid #1f242a;
-  background: #2b3036;
-  border-radius: 6px;
-  padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border: 1px solid #1f242a;
+    background: #2b3036;
+    border-radius: 6px;
+    padding: 10px;
 }
 
 .sidebar-header__hidden-input {
-  display: none;
+    display: none;
 }
 
 .sidebar-header__menu-row {
-  display: grid;
-  grid-template-columns: 86px 1fr;
-  gap: 8px;
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 8px;
 }
 
 .sidebar-header__menu-wrap,
 .sidebar-header__add-wrap {
-  position: relative;
+    position: relative;
 }
 
 .sidebar-header__menu-button {
-  width: 100%;
-  border: 1px solid #151a1f;
-  background: #20252b;
-  color: #d6dee7;
-  padding: 8px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 700;
+    width: 100%;
+    border: 1px solid #151a1f;
+    background: #20252b;
+    color: #d6dee7;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .sidebar-header__menu-button:hover {
-  background: #2a3138;
+    background: #2a3138;
 }
 
 .sidebar-header__add-button {
-  border: 1px solid #176293;
-  background: linear-gradient(180deg, #2994d6 0%, #1f7db8 100%);
-  color: #ffffff;
-  padding: 8px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+    border: 1px solid #176293;
+    background: linear-gradient(180deg, #2994d6 0%, #1f7db8 100%);
+    color: #ffffff;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
 }
 
 .sidebar-header__add-button:hover {
-  background: linear-gradient(180deg, #2fa3e8 0%, #2487c5 100%);
+    background: linear-gradient(180deg, #2fa3e8 0%, #2487c5 100%);
 }
 
 .sidebar-header__menu-panel,
 .sidebar-header__add-menu {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #151a1f;
-  border-radius: 6px;
-  overflow: hidden;
-  background: #1f252b;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #151a1f;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #1f252b;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
 }
 
 .sidebar-header__menu-item {
-  border: 0;
-  border-top: 1px solid #151a1f;
-  background: transparent;
-  color: #d4dee8;
-  font-size: 12px;
-  font-weight: 600;
-  text-align: left;
-  padding: 8px 10px;
-  cursor: pointer;
+    border: 0;
+    border-top: 1px solid #151a1f;
+    background: transparent;
+    color: #d4dee8;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 10px;
+    cursor: pointer;
 }
 
 .sidebar-header__menu-item:first-child {
-  border-top: 0;
+    border-top: 0;
 }
 
 .sidebar-header__menu-item:hover {
-  background: #2a3139;
+    background: #2a3139;
 }
 
 .sidebar-header__save-status {
-  font-size: 11px;
-  color: #8fc8ff;
-  font-weight: 600;
-  min-height: 14px;
+    font-size: 11px;
+    color: #8fc8ff;
+    font-weight: 600;
+    min-height: 14px;
 }
 
 .sidebar-header__play-button {
-  border: 1px solid #206d42;
-  background: linear-gradient(180deg, #27ad67 0%, #1f8c53 100%);
-  color: #ffffff;
-  padding: 9px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+    border: 1px solid #206d42;
+    background: linear-gradient(180deg, #27ad67 0%, #1f8c53 100%);
+    color: #ffffff;
+    padding: 9px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
 }
 
 .sidebar-header__play-button:hover {
-  background: linear-gradient(180deg, #2dbf73 0%, #23965b 100%);
+    background: linear-gradient(180deg, #2dbf73 0%, #23965b 100%);
 }
 
 .sidebar-header__play-button.active {
-  border-color: #7e2727;
-  background: linear-gradient(180deg, #cc4d4d 0%, #a93c3c 100%);
+    border-color: #7e2727;
+    background: linear-gradient(180deg, #cc4d4d 0%, #a93c3c 100%);
 }
 
 .sidebar-header__play-button.active:hover {
-  background: linear-gradient(180deg, #d95a5a 0%, #b24444 100%);
+    background: linear-gradient(180deg, #d95a5a 0%, #b24444 100%);
 }
 
 .sidebar-header__mode-group {
-  display: flex;
-  border: 1px solid #151a1f;
-  border-radius: 4px;
-  overflow: hidden;
+    display: flex;
+    border: 1px solid #151a1f;
+    border-radius: 4px;
+    overflow: hidden;
 }
 
 .sidebar-header__mode-button {
-  flex: 1;
-  border: 0;
-  padding: 7px 8px;
-  cursor: pointer;
-  background: #20252b;
-  color: #c2ccd7;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+    flex: 1;
+    border: 0;
+    padding: 7px 8px;
+    cursor: pointer;
+    background: #20252b;
+    color: #c2ccd7;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
 .sidebar-header__mode-button + .sidebar-header__mode-button {
-  border-left: 1px solid #151a1f;
+    border-left: 1px solid #151a1f;
 }
 
 .sidebar-header__mode-button:hover {
-  background: #2d343c;
+    background: #2d343c;
 }
 
 .sidebar-header__mode-button.active {
-  background: linear-gradient(180deg, #3f78be 0%, #305f99 100%);
-  color: #ffffff;
+    background: linear-gradient(180deg, #3f78be 0%, #305f99 100%);
+    color: #ffffff;
 }
 
 .sidebar-header__fps-button {
-  border: 1px solid #151a1f;
-  background: #20252b;
-  color: #c2ccd7;
-  padding: 7px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+    border: 1px solid #151a1f;
+    background: #20252b;
+    color: #c2ccd7;
+    padding: 7px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
 .sidebar-header__fps-button:hover {
-  background: #2d343c;
+    background: #2d343c;
 }
 
 .sidebar-header__fps-button.active {
-  background: linear-gradient(180deg, #3f78be 0%, #305f99 100%);
-  color: #ffffff;
+    background: linear-gradient(180deg, #3f78be 0%, #305f99 100%);
+    color: #ffffff;
 }

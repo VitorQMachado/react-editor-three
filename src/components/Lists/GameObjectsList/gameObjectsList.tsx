@@ -1,7 +1,7 @@
-import { GameManager, GameObject } from '@vmlibs/unit_three'
-import { useEffect, useState } from 'react'
+import { GameManager, GameObject } from '@vmlibs/unit_three';
+import { useEffect, useState } from 'react';
 import { getStoredLoadJsonName, loadeGameObjects } from '../../../services';
-import "./styles.css";
+import './styles.css';
 
 const GameObjectsListComponent = ({ gameManager }: { gameManager?: GameManager }) => {
     const [gameInitiated, setGameInitiated] = useState(false);
@@ -9,45 +9,48 @@ const GameObjectsListComponent = ({ gameManager }: { gameManager?: GameManager }
     const [selectedGameObjectName, setSelectedGameObjectName] = useState<string | undefined>();
 
     useEffect(() => {
-        console.log("🚀 ~ GameObjectsListComponent ~ gameManager:", gameManager)
+        console.log('🚀 ~ GameObjectsListComponent ~ gameManager:', gameManager);
         if (!gameManager || gameInitiated) {
             return;
         }
         setGameInitiated(true);
 
-        loadeGameObjects(getStoredLoadJsonName(), { useStoredOnly: true }).then((data) => {
-            if (data) {
-                console.log("🚀 ~ GameObjectsListComponent ~ loaded data:", data)
-                gameManager.LoadGameObjectsMap(data);
-            }
-        }).catch((err) => {
-            console.error('Auto-load failed:', err);
-        });
+        loadeGameObjects(getStoredLoadJsonName(), { useStoredOnly: true })
+            .then((data) => {
+                if (data) {
+                    console.log('🚀 ~ GameObjectsListComponent ~ loaded data:', data);
+                    gameManager.LoadGameObjectsMap(data);
+                }
+            })
+            .catch((err) => {
+                console.error('Auto-load failed:', err);
+            });
 
         const { emitter } = gameManager;
 
-        emitter.on("updatedGameObject", () => {
-            console.log("🚀 ~ GameObjectsListComponent ~ gameObjects:", gameManager?.GetGameObjects())
+        emitter.on('updatedGameObject', () => {
+            console.log('🚀 ~ GameObjectsListComponent ~ gameObjects:', gameManager?.GetGameObjects());
             setGameObjects(gameManager?.GetGameObjects());
         });
 
-        emitter.on("selectedGameObject", (gameObject) => {
+        emitter.on('selectedGameObject', (gameObject) => {
             const gameObjectName = gameObject?.Name;
-            console.log("🚀 ~ GameObjectsListComponent ~ gameObjectName:", gameObject, gameObjectName)
+            console.log('🚀 ~ GameObjectsListComponent ~ gameObjectName:', gameObject, gameObjectName);
             setSelectedGameObjectName(gameObjectName);
         });
 
-        emitter.on("clicked-raycaster", ({ intersects }) => {
-            console.log("🚀 ~ GameObjectsListComponent ~ intersects:",
-                intersects.filter(o => o.object.type === 'Mesh').sort((o1, o2) => o1.distance - o2.distance)
-            )
-        })
+        emitter.on('clicked-raycaster', ({ intersects }) => {
+            console.log(
+                '🚀 ~ GameObjectsListComponent ~ intersects:',
+                intersects.filter((o) => o.object.type === 'Mesh').sort((o1, o2) => o1.distance - o2.distance)
+            );
+        });
     }, [gameManager, gameInitiated]);
 
     const onSelectGameObject = (gameObjectName: string) => {
-        console.log("🚀 ~ onSelectGameObject ~ gameObjectName:", gameObjectName)
+        console.log('🚀 ~ onSelectGameObject ~ gameObjectName:', gameObjectName);
         gameManager?.SelectGameObjectByName(gameObjectName);
-    }
+    };
 
     const renderGameObject = (gameObject: GameObject) => {
         const children = gameObject?.Children;
@@ -67,13 +70,10 @@ const GameObjectsListComponent = ({ gameManager }: { gameManager?: GameManager }
                     </div>
                 )}
             </div>
-        )
-    }
+        );
+    };
 
+    return <div className="game-objects-list">{gameObjects?.map((gameObject) => renderGameObject(gameObject))}</div>;
+};
 
-    return (
-        <div className="game-objects-list">{gameObjects?.map((gameObject) => renderGameObject(gameObject))}</div>
-    )
-}
-
-export default GameObjectsListComponent
+export default GameObjectsListComponent;

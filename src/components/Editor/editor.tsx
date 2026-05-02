@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { GameManager } from "@vmlibs/unit_three";
+import { GameManager } from '@vmlibs/unit_three';
 import SidebarComponent from '../Sidebar/sidebar';
-import "./styles.css"
+import './styles.css';
 import { GameScreenComponent } from '../GameScreen/game-screen';
 
 const getFirstPreviewCamera = (gameManager: GameManager) => {
@@ -142,7 +142,7 @@ export const Editor = () => {
         setIsPlaying((prev) => !prev);
     };
 
-	return (
+    return (
         <div className="editor-container">
             <SidebarComponent gameManager={gameManager} isPlaying={isPlaying} onTogglePlay={handleTogglePlay} />
             <div className={`editor-workspace ${isPlaying ? 'editor-workspace--playing' : ''}`}>
@@ -155,4 +155,4 @@ export const Editor = () => {
             </div>
         </div>
     );
-}
+};

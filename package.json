@@ -40,7 +40,8 @@
         "web-vitals": "^2.1.4"
     },
     "devDependencies": {
-        "concurrently": "^9.2.1"
+        "concurrently": "^9.2.1",
+        "prettier": "^3.8.3"
     },
     "scripts": {
         "dev": "concurrently -n unit_three,editor -c yellow,cyan \"npm run dev:lib\" \"npm run dev:app\"",
@@ -50,7 +51,8 @@
         "build": "react-scripts build",
         "test": "react-scripts test",
         "eject": "react-scripts eject",
-        "build_tsc": "tsc"
+        "build_tsc": "tsc",
+        "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\""
     },
     "eslintConfig": {
         "extends": [

@@ -1,5 +1,3 @@
-
-
 const RUNTIME_ONLY_KEYS = new Set(['data', 'auxParams', 'mesh', 'parentMesh', 'scene', 'domElement', 'params']);
 
 const isPlainNumericObject = (value: any, keys: string[]) => {
@@ -65,24 +63,25 @@ const serializeValue = (value: any, seen = new WeakSet()): any => {
     seen.add(value);
 
     if (Array.isArray(value)) {
-        const serializedArray = value
-            .map((item) => serializeValue(item, seen))
-            .filter((item) => item !== undefined);
+        const serializedArray = value.map((item) => serializeValue(item, seen)).filter((item) => item !== undefined);
         seen.delete(value);
         return serializedArray;
     }
 
-    const serializedObject = Object.entries(value).reduce((acc, [key, currentValue]) => {
-        if (RUNTIME_ONLY_KEYS.has(key)) {
-            return acc;
-        }
+    const serializedObject = Object.entries(value).reduce(
+        (acc, [key, currentValue]) => {
+            if (RUNTIME_ONLY_KEYS.has(key)) {
+                return acc;
+            }
 
-        const normalized = serializeValue(currentValue, seen);
-        if (normalized !== undefined) {
-            acc[key] = normalized;
-        }
-        return acc;
-    }, {} as Record<string, any>);
+            const normalized = serializeValue(currentValue, seen);
+            if (normalized !== undefined) {
+                acc[key] = normalized;
+            }
+            return acc;
+        },
+        {} as Record<string, any>
+    );
 
     seen.delete(value);
     return serializedObject;
@@ -90,33 +89,40 @@ const serializeValue = (value: any, seen = new WeakSet()): any => {
 
 const serializeComponent = (component: any) => ({
     name: component?.name || '',
-    options: serializeValue(component?.options) || {}
+    options: serializeValue(component?.options) || {},
 });
 
 const serializeGameObject = (gameObject: any) => ({
     id: Number(gameObject?.id) || 0,
     name: String(gameObject?.name || ''),
-    components: Object.entries(gameObject?.components || {}).reduce((acc, [key, component]) => {
-        acc[key] = serializeComponent(component);
-        return acc;
-    }, {} as Record<string, any>),
+    components: Object.entries(gameObject?.components || {}).reduce(
+        (acc, [key, component]) => {
+            acc[key] = serializeComponent(component);
+            return acc;
+        },
+        {} as Record<string, any>
+    ),
     parent: { name: gameObject?.parent?.name || undefined },
     active: Boolean(gameObject?.active),
     destroyed: Boolean(gameObject?.destroyed),
     position: serializeMathLike(gameObject?.position) || { x: 0, y: 0, z: 0 },
     rotation: serializeMathLike(gameObject?.rotation) || { x: 0, y: 0, z: 0, w: 1 },
     transform: serializeMathLike(gameObject?.transform) || { elements: [] },
-    worldTransform: serializeMathLike(gameObject?.worldTransform) || { elements: [] }
+    worldTransform: serializeMathLike(gameObject?.worldTransform) || { elements: [] },
 });
 
 export const prepareGameObjectsForSave = (gameObjects: any) => {
-    return Object.entries(gameObjects || {}).reduce((acc, [key, gameObject]) => {
-        acc[key] = serializeGameObject(gameObject);
-        return acc;
-    }, {} as Record<string, any>);
+    return Object.entries(gameObjects || {}).reduce(
+        (acc, [key, gameObject]) => {
+            acc[key] = serializeGameObject(gameObject);
+            return acc;
+        },
+        {} as Record<string, any>
+    );
 };
 
-export const stringifyGameObjectsForSave = (gameObjects: any) => JSON.stringify(prepareGameObjectsForSave(gameObjects), null, 2);
+export const stringifyGameObjectsForSave = (gameObjects: any) =>
+    JSON.stringify(prepareGameObjectsForSave(gameObjects), null, 2);
 
 const normalizeLoadedGameObjects = (payload: any) => {
     // Accept both the new direct map format and legacy { gameObjects: ... } payloads.
@@ -135,20 +141,18 @@ const safeNumber = (value: any, fallback = 0) => {
 const normalizeVector3 = (value: any) => ({
     x: safeNumber(value?.x, 0),
     y: safeNumber(value?.y, 0),
-    z: safeNumber(value?.z, 0)
+    z: safeNumber(value?.z, 0),
 });
 
 const normalizeVector4 = (value: any) => ({
     x: safeNumber(value?.x, 0),
     y: safeNumber(value?.y, 0),
     z: safeNumber(value?.z, 0),
-    w: safeNumber(value?.w, 1)
+    w: safeNumber(value?.w, 1),
 });
 
 const normalizeMatrixLike = (value: any) => {
-    const elements = Array.isArray(value?.elements)
-        ? value.elements.map((item: any) => safeNumber(item, 0))
-        : [];
+    const elements = Array.isArray(value?.elements) ? value.elements.map((item: any) => safeNumber(item, 0)) : [];
     return { elements };
 };
 
@@ -157,27 +161,30 @@ const sanitizeLoadedGameObjects = (payload: any) => {
         return {};
     }
 
-    return Object.entries(payload).reduce((acc, [key, rawObject], index) => {
-        const source = (rawObject && typeof rawObject === 'object') ? rawObject as Record<string, any> : {};
+    return Object.entries(payload).reduce(
+        (acc, [key, rawObject], index) => {
+            const source = rawObject && typeof rawObject === 'object' ? (rawObject as Record<string, any>) : {};
 
-        acc[key] = {
-            ...source,
-            id: safeNumber(source.id, index + 1),
-            name: String(source.name || key),
-            components: (source.components && typeof source.components === 'object') ? source.components : {},
-            parent: {
-                name: source.parent?.name ? String(source.parent.name) : undefined
-            },
-            active: source.active !== undefined ? Boolean(source.active) : true,
-            destroyed: Boolean(source.destroyed),
-            position: normalizeVector3(source.position),
-            rotation: normalizeVector4(source.rotation),
-            transform: normalizeMatrixLike(source.transform),
-            worldTransform: normalizeMatrixLike(source.worldTransform)
-        };
+            acc[key] = {
+                ...source,
+                id: safeNumber(source.id, index + 1),
+                name: String(source.name || key),
+                components: source.components && typeof source.components === 'object' ? source.components : {},
+                parent: {
+                    name: source.parent?.name ? String(source.parent.name) : undefined,
+                },
+                active: source.active !== undefined ? Boolean(source.active) : true,
+                destroyed: Boolean(source.destroyed),
+                position: normalizeVector3(source.position),
+                rotation: normalizeVector4(source.rotation),
+                transform: normalizeMatrixLike(source.transform),
+                worldTransform: normalizeMatrixLike(source.worldTransform),
+            };
 
-        return acc;
-    }, {} as Record<string, any>);
+            return acc;
+        },
+        {} as Record<string, any>
+    );
 };
 
 export const parseLoadedGameObjectsText = (text: string) => {
@@ -238,7 +245,7 @@ const stripCommonPrefixes = (pathValue: string) => {
         normalized.replace(/^assets\/img\//, ''),
         normalized.replace(/^public\//, ''),
         normalized.replace(/^public\/assets\//, ''),
-        normalized.replace(/^public\/assets\/img\//, '')
+        normalized.replace(/^public\/assets\/img\//, ''),
     ];
 };
 
@@ -262,14 +269,14 @@ const findImageUrlForPath = async (
         console.log('[load-texture] resolved', {
             requestedPath: originalPath,
             matchedCandidate: candidate,
-            resolvedFileName: file.name
+            resolvedFileName: file.name,
         });
         return fileToBlobUrl(file, originalPath);
     }
 
     console.warn('[load-texture] missing', {
         requestedPath: originalPath,
-        attemptedCandidates: candidates
+        attemptedCandidates: candidates,
     });
     return originalPath;
 };
@@ -451,18 +458,14 @@ const collectFilesFromDirectory = async (
     return files;
 };
 
-const buildImageFileMap = (
-    files: Array<{ path: string; handle: FileSystemFileHandle }>,
-    rootPath = ''
-) => {
+const buildImageFileMap = (files: Array<{ path: string; handle: FileSystemFileHandle }>, rootPath = '') => {
     const imageFileMap = new Map<string, FileSystemFileHandle>();
     files.forEach((entry) => {
         if (!IMAGE_EXTENSIONS.has(getFileExtension(entry.path))) {
             return;
         }
-        const localPath = rootPath && entry.path.startsWith(`${rootPath}/`)
-            ? entry.path.slice(rootPath.length + 1)
-            : entry.path;
+        const localPath =
+            rootPath && entry.path.startsWith(`${rootPath}/`) ? entry.path.slice(rootPath.length + 1) : entry.path;
 
         imageFileMap.set(localPath, entry.handle);
         stripCommonPrefixes(localPath).forEach((candidate) => imageFileMap.set(candidate, entry.handle));
@@ -474,13 +477,10 @@ const buildImageFileMap = (
     return imageFileMap;
 };
 
-const findJsonEntry = (
-    files: Array<{ path: string; handle: FileSystemFileHandle }>,
-    jsonFileName?: string
-) => {
+const findJsonEntry = (files: Array<{ path: string; handle: FileSystemFileHandle }>, jsonFileName?: string) => {
     const normalizedJsonFileName = jsonFileName ? normalizePath(jsonFileName) : undefined;
     return normalizedJsonFileName
-        ? (files.find((entry) => entry.path.endsWith(normalizedJsonFileName)) || undefined)
+        ? files.find((entry) => entry.path.endsWith(normalizedJsonFileName)) || undefined
         : undefined;
 };
 
@@ -489,7 +489,7 @@ const getFilesForDirectoryHandle = async (directoryHandle: FileSystemDirectoryHa
     console.log('[load-json] scanned directory', {
         directoryName: directoryHandle.name,
         totalFiles: allFiles.length,
-        jsonFiles: allFiles.filter((entry) => getFileExtension(entry.path) === 'json').map((entry) => entry.path)
+        jsonFiles: allFiles.filter((entry) => getFileExtension(entry.path) === 'json').map((entry) => entry.path),
     });
     return allFiles;
 };
@@ -502,13 +502,13 @@ const resolveDirectoryFilesForJson = async (jsonFileName: string) => {
         if (existingJson) {
             console.log('[load-json] using stored folder handle', {
                 folderName: reusable.name,
-                matchedJson: existingJson.path
+                matchedJson: existingJson.path,
             });
             return { directoryHandle: reusable, allFiles: reusableFiles, selectedJson: existingJson };
         }
         console.warn('[load-json] stored folder does not contain selected json', {
             folderName: reusable.name,
-            requestedJson: jsonFileName
+            requestedJson: jsonFileName,
         });
     }
 
@@ -521,13 +521,16 @@ const resolveDirectoryFilesForJson = async (jsonFileName: string) => {
 
     console.log('[load-json] using repicked folder handle', {
         folderName: pickedDirectory.name,
-        matchedJson: pickedJson.path
+        matchedJson: pickedJson.path,
     });
     return { directoryHandle: pickedDirectory, allFiles: pickedFiles, selectedJson: pickedJson };
 };
 
 const loadGameObjectsFromDirectory = async (jsonFileName?: string, options?: LoadGameObjectsOptions) => {
-    const directoryHandle = await getDirectoryHandleForLoad(Boolean(options?.forcePickFolder), Boolean(options?.useStoredOnly));
+    const directoryHandle = await getDirectoryHandleForLoad(
+        Boolean(options?.forcePickFolder),
+        Boolean(options?.useStoredOnly)
+    );
     if (!directoryHandle) {
         throw new Error('No stored load folder available.');
     }
@@ -554,7 +557,7 @@ const loadGameObjectsFromDirectory = async (jsonFileName?: string, options?: Loa
     console.log('[load-json] prepared image map from folder load', {
         selectedJson: selectedJson.path,
         jsonFolderPath,
-        imageEntries: imageFileMap.size
+        imageEntries: imageFileMap.size,
     });
 
     return remapTexturePaths(parsed, imageFileMap);
@@ -563,7 +566,7 @@ const loadGameObjectsFromDirectory = async (jsonFileName?: string, options?: Loa
 const loadGameObjectsFromPickedJson = async () => {
     const [fileHandle] = await (window as any).showOpenFilePicker({
         types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }],
-        multiple: false
+        multiple: false,
     });
 
     const file = await fileHandle.getFile();
@@ -587,7 +590,7 @@ const loadGameObjectsFromPickedJson = async () => {
     console.log('[load-json] prepared image map from picked json', {
         selectedJson: selectedJson.path,
         jsonFolderPath,
-        imageEntries: imageFileMap.size
+        imageEntries: imageFileMap.size,
     });
 
     return remapTexturePaths(parsed, imageFileMap);
@@ -612,7 +615,10 @@ export const pickProjectFolder = async (): Promise<string> => {
     return (picked as FileSystemDirectoryHandle).name;
 };
 
-export const saveGameObjects = async (gameObjects: any, saveName?: string): Promise<{ success: boolean } | undefined> => {
+export const saveGameObjects = async (
+    gameObjects: any,
+    saveName?: string
+): Promise<{ success: boolean } | undefined> => {
     const json = stringifyGameObjectsForSave(gameObjects);
     const blob = new Blob([json], { type: 'application/json' });
 
@@ -620,7 +626,7 @@ export const saveGameObjects = async (gameObjects: any, saveName?: string): Prom
         try {
             const fileHandle = await (window as any).showSaveFilePicker({
                 suggestedName: `${saveName || 'save'}.json`,
-                types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+                types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }],
             });
             const writable = await fileHandle.createWritable();
             await writable.write(blob);
@@ -665,7 +671,7 @@ export const loadeGameObjects = async (jsonFileName?: string, options?: LoadGame
         try {
             const [fileHandle] = await (window as any).showOpenFilePicker({
                 types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }],
-                multiple: false
+                multiple: false,
             });
             const file = await fileHandle.getFile();
             const text = await file.text();

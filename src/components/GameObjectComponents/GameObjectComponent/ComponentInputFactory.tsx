@@ -7,6 +7,10 @@ type FactoryValue = {
     setValue?: (value: any) => void;
     options?: string[];
     optionLabels?: string[];
+    callbackOptions?: string[];
+    callbackOptionLabels?: string[];
+    componentOptions?: string[];
+    componentOptionLabels?: string[];
 };
 
 export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
@@ -28,7 +32,7 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
 
     const commonInputProps = {
         className: 'inspector-input',
-        disabled: typeof setValue !== 'function'
+        disabled: typeof setValue !== 'function',
     };
 
     const isTextureField = /\b(texture|textures|map|maps)\b/i.test(name || '');
@@ -55,16 +59,11 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
         return resolvedValue.startsWith('blob:') ? '' : resolvedValue;
     };
 
-    const renderTextureFileButton = (
-        onPick: (fileUrl: string, fileName: string) => void,
-        buttonLabel: string
-    ) => {
+    const renderTextureFileButton = (onPick: (fileUrl: string, fileName: string) => void, buttonLabel: string) => {
         const isDisabled = typeof setValue !== 'function';
         return (
             <div className="inspector-file-picker">
-                <label
-                    className={`inspector-file-picker__button ${isDisabled ? 'is-disabled' : ''}`}
-                >
+                <label className={`inspector-file-picker__button ${isDisabled ? 'is-disabled' : ''}`}>
                     {buttonLabel}
                     <input
                         type="file"
@@ -85,6 +84,10 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
 
     const options: string[] | undefined = (item as any).options;
     const optionLabels: string[] | undefined = (item as any).optionLabels;
+    const callbackOptions: string[] | undefined = (item as any).callbackOptions;
+    const callbackOptionLabels: string[] | undefined = (item as any).callbackOptionLabels;
+    const componentOptions: string[] | undefined = (item as any).componentOptions;
+    const componentOptionLabels: string[] | undefined = (item as any).componentOptionLabels;
     const isDisplacementScaleField = /^Displacement Scale$/i.test(name || '');
 
     const kind = (() => {
@@ -94,7 +97,12 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
         if (typeof local === 'string' && Array.isArray(options)) return 'select';
         if (typeof local === 'string') return 'string';
         if (Array.isArray(local)) return 'array';
-        if (local && typeof local === 'object' && ['x', 'y', 'z'].every((k) => typeof local[k] === 'number')) return 'vector';
+        if (local && typeof local === 'object' && ['x', 'y', 'z'].every((k) => typeof local[k] === 'number'))
+            return 'vector';
+        if (local && typeof local === 'object' && 'event' in local && 'componentName' in local && 'methodName' in local)
+            return 'component-mapping';
+        if (local && typeof local === 'object' && 'event' in local && ('callbackName' in local || 'callback' in local))
+            return 'mapping';
         if (local && typeof local === 'object' && isTextureField) return 'texture-object';
         if (local === null || local === undefined) return 'number';
         return 'unknown';
@@ -141,18 +149,12 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
         case 'string':
             if (isTextureField) {
                 const buttonLabel =
-                    selectedTextureName ||
-                    extractTextureReference(local) ||
-                    extractFileName(local) ||
-                    'Add';
+                    selectedTextureName || extractTextureReference(local) || extractFileName(local) || 'Add';
 
-                return renderTextureFileButton(
-                    (fileUrl, fileName) => {
-                        setSelectedTextureName(fileName);
-                        onChange(fileUrl);
-                    },
-                    buttonLabel
-                );
+                return renderTextureFileButton((fileUrl, fileName) => {
+                    setSelectedTextureName(fileName);
+                    onChange(fileUrl);
+                }, buttonLabel);
             }
             return (
                 <input
@@ -205,10 +207,115 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
                                 {...commonInputProps}
                                 type="number"
                                 value={local[axis]}
-                                onChange={(e) => onChange({ ...local, [axis]: Number((e.target as HTMLInputElement).value) })}
+                                onChange={(e) =>
+                                    onChange({ ...local, [axis]: Number((e.target as HTMLInputElement).value) })
+                                }
                             />
                         </div>
                     ))}
+                </div>
+            );
+
+        case 'component-mapping':
+            return (
+                <div className="inspector-vector-inputs">
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">event</label>
+                        <select
+                            className="inspector-input inspector-select"
+                            value={String(local?.event || '')}
+                            disabled={typeof setValue !== 'function'}
+                            onChange={(e) => onChange({ ...local, event: e.target.value })}
+                        >
+                            {(options || []).map((opt, idx) => (
+                                <option key={opt} value={opt}>
+                                    {optionLabels?.[idx] ?? opt}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">component</label>
+                        {!!(componentOptions && componentOptions.length) ? (
+                            <select
+                                className="inspector-input inspector-select"
+                                value={String(local?.componentName || '')}
+                                disabled={typeof setValue !== 'function'}
+                                onChange={(e) => onChange({ ...local, componentName: e.target.value })}
+                            >
+                                {componentOptions.map((opt, idx) => (
+                                    <option key={opt} value={opt}>
+                                        {componentOptionLabels?.[idx] ?? opt}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <input
+                                {...commonInputProps}
+                                type="text"
+                                placeholder="ComponentName"
+                                value={String(local?.componentName || '')}
+                                onChange={(e) => onChange({ ...local, componentName: (e.target as HTMLInputElement).value })}
+                            />
+                        )}
+                    </div>
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">method</label>
+                        <input
+                            {...commonInputProps}
+                            type="text"
+                            placeholder="methodName"
+                            value={String(local?.methodName || '')}
+                            onChange={(e) => onChange({ ...local, methodName: (e.target as HTMLInputElement).value })}
+                        />
+                    </div>
+                </div>
+            );
+
+        case 'mapping':
+            return (
+                <div className="inspector-vector-inputs">
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">event</label>
+                        <select
+                            className="inspector-input inspector-select"
+                            value={String(local?.event || '')}
+                            disabled={typeof setValue !== 'function'}
+                            onChange={(e) => onChange({ ...local, event: e.target.value })}
+                        >
+                            {(options || []).map((opt, idx) => (
+                                <option key={opt} value={opt}>
+                                    {optionLabels?.[idx] ?? opt}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="inspector-vector-inputs__axis">
+                        {!!(callbackOptions && callbackOptions.length) && (
+                            <>
+                                <label className="inspector-vector-inputs__label">saved callbacks</label>
+                                <select
+                                    className="inspector-input inspector-select"
+                                    value={String(local?.callbackName || '')}
+                                    disabled={typeof setValue !== 'function'}
+                                    onChange={(e) => onChange({ ...local, callbackName: e.target.value })}
+                                >
+                                    {callbackOptions.map((opt, idx) => (
+                                        <option key={opt} value={opt}>
+                                            {callbackOptionLabels?.[idx] ?? opt}
+                                        </option>
+                                    ))}
+                                </select>
+                            </>
+                        )}
+                        <label className="inspector-vector-inputs__label">callbackName</label>
+                        <input
+                            {...commonInputProps}
+                            type="text"
+                            value={String(local?.callbackName || '')}
+                            onChange={(e) => onChange({ ...local, callbackName: (e.target as HTMLInputElement).value })}
+                        />
+                    </div>
                 </div>
             );
 
@@ -223,7 +330,7 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
                                     if (/^Textures$/i.test(name || '')) {
                                         console.log('[skybox] selected texture', {
                                             skyboxFace: key,
-                                            realFileName: fileName
+                                            realFileName: fileName,
                                         });
                                     }
                                     setSelectedTextureNamesByKey((prev) => ({ ...prev, [key]: fileName }));

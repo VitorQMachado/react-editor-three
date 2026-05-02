@@ -1,17 +1,43 @@
-import { EventStream, GameComponent, GameComponentName, GameManager, GameObject, IGameCameraComponent, IGameObjectUpdatedPayload } from '@vmlibs/unit_three'
+import {
+    EventStream,
+    GameComponent,
+    GameComponentName,
+    GameComponentNameEnum,
+    GameManager,
+    GameObject,
+    IGameCameraComponent,
+    IGameObjectUpdatedPayload,
+} from '@vmlibs/unit_three';
 import { useEffect, useRef, useState } from 'react';
 import { GameObjectComponent } from '../../GameObjectComponents/GameObjectComponent/GameObjectComponent';
 
 type ComponentName = GameComponentName | '';
 
-const ALL_COMPONENTS: { name: ComponentName; label: string; description: string }[] = [
-    { name: 'MeshComponent',    label: 'Mesh',    description: 'Renders a 3D mesh in the scene' },
-    { name: 'LightComponent',   label: 'Light',   description: 'Adds a light source to the scene' },
-    { name: 'SkyboxComponent',  label: 'Skybox',  description: 'Applies a skybox environment' },
-    { name: 'GrassComponent',   label: 'Grass',   description: 'Renders procedural grass geometry' },
-    { name: 'RigidBodyComponent', label: 'RigidBody', description: 'Adds physics body properties like velocity and gravity' },
-    { name: 'ColliderComponent',  label: 'Collider',  description: 'Adds collision shape for physics interaction' },
-    { name: 'CameraComponent',  label: 'Game Camera',  description: 'Controls runtime scene view and play mode camera behavior' },
+const ALL_COMPONENTS: { name: GameComponentName; label: string; description: string }[] = [
+    { name: GameComponentNameEnum.MeshComponent, label: 'Mesh', description: 'Renders a 3D mesh in the scene' },
+    { name: GameComponentNameEnum.LightComponent, label: 'Light', description: 'Adds a light source to the scene' },
+    {
+        name: GameComponentNameEnum.InputComponent,
+        label: 'Input',
+        description: 'Maps keyboard and mouse events to gameplay callbacks',
+    },
+    { name: GameComponentNameEnum.SkyboxComponent, label: 'Skybox', description: 'Applies a skybox environment' },
+    { name: GameComponentNameEnum.GrassComponent, label: 'Grass', description: 'Renders procedural grass geometry' },
+    {
+        name: GameComponentNameEnum.RigidBodyComponent,
+        label: 'RigidBody',
+        description: 'Adds physics body properties like velocity and gravity',
+    },
+    {
+        name: GameComponentNameEnum.ColliderComponent,
+        label: 'Collider',
+        description: 'Adds collision shape for physics interaction',
+    },
+    {
+        name: GameComponentNameEnum.CameraComponent,
+        label: 'Game Camera',
+        description: 'Controls runtime scene view and play mode camera behavior',
+    },
 ];
 
 type ComponentEventLog = {
@@ -52,14 +78,16 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
 
     useEffect(() => {
         const pushEvent = (entry: Omit<ComponentEventLog, 'id' | 'time'>) => {
-            setEventLogs((prev) => [
-                {
-                    ...entry,
-                    id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-                    time: new Date().toLocaleTimeString()
-                },
-                ...prev
-            ].slice(0, 50));
+            setEventLogs((prev) =>
+                [
+                    {
+                        ...entry,
+                        id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+                        time: new Date().toLocaleTimeString(),
+                    },
+                    ...prev,
+                ].slice(0, 50)
+            );
         };
 
         const collisionSub = EventStream.streamTo('collision').subscribe((payload: any) => {
@@ -73,12 +101,17 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
             const component = payload?.component || 'Unknown';
             const property = payload?.property || '';
             const raw = payload?.value;
-            const detail = raw === null || raw === undefined
-                ? 'null'
-                : typeof raw === 'object'
-                    ? JSON.stringify(raw)
-                    : String(raw);
-            pushEvent({ category: 'component', label: `${component}`, detail: property ? `${property}: ${detail}` : detail });
+            const detail =
+                raw === null || raw === undefined
+                    ? 'null'
+                    : typeof raw === 'object'
+                      ? JSON.stringify(raw)
+                      : String(raw);
+            pushEvent({
+                category: 'component',
+                label: `${component}`,
+                detail: property ? `${property}: ${detail}` : detail,
+            });
         });
 
         return () => {
@@ -97,11 +130,13 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
 
     const handleAddComponent = (componentName: ComponentName) => {
         if (!selectedGameObject) return;
-        const defaultOptionsByComponent: Partial<Record<ComponentName, Partial<IGameCameraComponent> | Record<string, unknown>>> = {
+        const defaultOptionsByComponent: Partial<
+            Record<ComponentName, Partial<IGameCameraComponent> | Record<string, unknown>>
+        > = {
             SkyboxComponent: {
                 texture: '',
                 size: 150,
-                position: { x: 0, y: 0, z: 0 }
+                position: { x: 0, y: 0, z: 0 },
             },
             CameraComponent: {
                 isAlive: false,
@@ -110,9 +145,9 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
                 lookAtTarget: '',
                 options: {
                     cameraTargetDistance: 10,
-                    position: { x: 0, y: 0, z: 10 }
-                }
-            } as Partial<IGameCameraComponent>
+                    position: { x: 0, y: 0, z: 10 },
+                },
+            } as Partial<IGameCameraComponent>,
         };
 
         const componentData = defaultOptionsByComponent[componentName] || {};
@@ -171,7 +206,9 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
         <>
             <div key={`game-object-list-${selectedGameObject.Name}`} className="inspector-object">
                 <div className="inspector-object__header">
-                    <label className="inspector-object__label" htmlFor="selected-game-object-name">Name</label>
+                    <label className="inspector-object__label" htmlFor="selected-game-object-name">
+                        Name
+                    </label>
                     <input
                         id="selected-game-object-name"
                         className="inspector-object__name-input"
@@ -199,18 +236,17 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
 
                 <div className="inspector-object__components">
                     {components.map((component) => (
-                        <GameObjectComponent key={`game-object-component-${component.NAME}`} gameComponent={component} />
+                        <GameObjectComponent
+                            key={`game-object-component-${component.NAME}`}
+                            gameComponent={component}
+                        />
                     ))}
                 </div>
 
                 <div className="inspector-event-log">
                     <div className="inspector-event-log__header">
                         <span>Component Events</span>
-                        <button
-                            type="button"
-                            className="inspector-event-log__clear"
-                            onClick={() => setEventLogs([])}
-                        >
+                        <button type="button" className="inspector-event-log__clear" onClick={() => setEventLogs([])}>
                             Clear
                         </button>
                     </div>
@@ -221,7 +257,9 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
                         <div className="inspector-event-log__list">
                             {eventLogs.map((log) => (
                                 <div key={log.id} className="inspector-event-log__item">
-                                    <span className={`inspector-event-log__badge inspector-event-log__badge--${log.category}`}>
+                                    <span
+                                        className={`inspector-event-log__badge inspector-event-log__badge--${log.category}`}
+                                    >
                                         {log.category}
                                     </span>
                                     <div className="inspector-event-log__label">{log.label}</div>
@@ -245,7 +283,14 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
                     >
                         <div className="add-component-modal__header">
                             <span className="add-component-modal__title">Add Component</span>
-                            <button type="button" className="add-component-modal__close" onClick={closeModal} aria-label="Close">✕</button>
+                            <button
+                                type="button"
+                                className="add-component-modal__close"
+                                onClick={closeModal}
+                                aria-label="Close"
+                            >
+                                ✕
+                            </button>
                         </div>
 
                         <div className="add-component-modal__search-wrap">
@@ -280,6 +325,5 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
                 </div>
             )}
         </>
-    )
-}
-
+    );
+};

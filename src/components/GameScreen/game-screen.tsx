@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { GameManager } from "@vmlibs/unit_three";
+import { GameManager } from '@vmlibs/unit_three';
 
 type GameScreenMode = 'editor' | 'runtime';
 
@@ -22,7 +22,7 @@ export const GameScreenComponent = ({ mode = 'editor', onGameLoad, subtitle, tit
             gameOptions: {
                 containerElement: ref.current,
                 isEditor: true,
-            }
+            },
         });
 
         onGameLoad?.(gameManager);
@@ -32,7 +32,7 @@ export const GameScreenComponent = ({ mode = 'editor', onGameLoad, subtitle, tit
         };
     }, [onGameLoad]);
 
-	return (
+    return (
         <section className={`game-screen-panel game-screen-panel--${mode}`}>
             {(title || subtitle) && (
                 <div className="game-screen-panel__header">
@@ -45,4 +45,4 @@ export const GameScreenComponent = ({ mode = 'editor', onGameLoad, subtitle, tit
             </div>
         </section>
     );
-}
+};
