@@ -4,10 +4,10 @@ import GameObjectsListComponent from '../Lists/GameObjectsList/gameObjectsList';
 import { GameObjectComponentsList } from '../Lists/GameObjectComponentsList/gameObjectComponentsList';
 import { SidebarHeader } from './SidebarHeader/sidebarHeader';
 
-const SidebarComponent = ({ gameManager }: { gameManager?: GameManager }) => {
+const SidebarComponent = ({ gameManager, isPlaying = false, onTogglePlay }: { gameManager?: GameManager; isPlaying?: boolean; onTogglePlay?: () => void }) => {
     return gameManager && (
         <aside className="sidebar">
-            <SidebarHeader gameManager={gameManager} />
+            <SidebarHeader gameManager={gameManager} isPlaying={isPlaying} onTogglePlay={onTogglePlay} />
 
 
             <section className="sidebar__panel sidebar__panel--inspector">

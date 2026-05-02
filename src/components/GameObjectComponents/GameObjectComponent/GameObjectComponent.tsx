@@ -1,5 +1,6 @@
 import ComponentInputFactory from './ComponentInputFactory';
 import { getOriginalPathForBlob } from '../../../services';
+import { FollowMode, GameComponent, IFactoryValue } from '@vmlibs/unit_three';
 import './styles.css';
 
 const RAD_TO_DEG = 180 / Math.PI;
@@ -7,10 +8,20 @@ const DEG_TO_RAD = Math.PI / 180;
 
 const isRotationAxisItem = (name: string) => /rotation/i.test(name) && /\s[XYZ]$/i.test(name);
 
-export const GameObjectComponent = ({ gameComponent }: { gameComponent: any }) => {
+export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { gameComponent: GameComponent }) => {
+    const gameComponent = gameComponentProp as any;
     const factory = gameComponent?.Factory;
-    const rawList: any[] = factory?.valuesList || [];
+    const rawList: IFactoryValue[] = (factory?.valuesList || []).filter((item: IFactoryValue) => {
+        const itemName = item.name || '';
+        if (gameComponent.NAME !== 'CameraComponent') {
+            return true;
+        }
+
+        // Keep camera runtime toggles out of the inspector to avoid conflicting with play/editor flow.
+        return !/^is\s*(alive|preview)$/i.test(itemName);
+    });
     const lightTypeOptions = ['DirectionalLight', 'PointLight', 'SpotLight', 'AmbientLight', 'HemisphereLight', 'RectAreaLight'];
+    const cameraFollowModeOptions: FollowMode[] = ['lookAt', 'follow'];
 
     const valuesList = rawList.map((item) => {
         const itemName = item.name || '';
@@ -63,6 +74,24 @@ export const GameObjectComponent = ({ gameComponent }: { gameComponent: any }) =
                 options: lightTypeOptions,
                 optionLabels: lightTypeOptions,
                 setValue: setLightType
+            };
+        }
+
+        if (gameComponent.NAME === 'CameraComponent' && /^follow\s*mode$/i.test(itemName)) {
+            return {
+                ...item,
+                options: cameraFollowModeOptions,
+                optionLabels: cameraFollowModeOptions,
+                setValue: (nextMode: string) => {
+                    item.setValue?.(nextMode);
+                    const manager = gameComponent?.Manager;
+                    manager?.emitter?.emit?.('updatedGameObject', gameComponent?.Parent);
+                    manager?.emitter?.emit?.('component.updated', {
+                        component: gameComponent?.NAME,
+                        property: 'followMode',
+                        value: nextMode
+                    });
+                }
             };
         }
 
@@ -244,3 +273,4 @@ export const GameObjectComponent = ({ gameComponent }: { gameComponent: any }) =
         </div>
     )
 }
+

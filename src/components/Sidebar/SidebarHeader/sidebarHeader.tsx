@@ -1,15 +1,14 @@
-import { THREE } from '@vmlibs/unit_three'
+import { THREE, GameManager, IGameCameraComponent, FollowMode } from '@vmlibs/unit_three'
 import React, { useEffect, useRef, useState } from 'react'
 import { loadeGameObjects, parseLoadedGameObjectsText, pickProjectFolder, saveGameObjects, stringifyGameObjectsForSave } from '../../../services'
 import './styles.css'
 
-type GameManagerLike = any
 type TransformMode = 'translate' | 'rotate' | 'scale'
-type CreatePreset = 'default' | 'sphere' | 'cube' | 'plane' | 'skybox'
+type CreatePreset = 'default' | 'sphere' | 'cube' | 'plane' | 'skybox' | 'camera'
 const DEFAULT_SAVE_NAME = 'wargame'
 const PROJECT_NAME_KEY = 'react-editor-three:project-name'
 
-export const SidebarHeader = ({ gameManager }: { gameManager: GameManagerLike }) => {
+export const SidebarHeader = ({ gameManager, isPlaying = false, onTogglePlay }: { gameManager: GameManager; isPlaying?: boolean; onTogglePlay?: () => void }) => {
   const [transformMode, setTransformMode] = useState<TransformMode>('translate')
   const [isFpsVisible, setIsFpsVisible] = useState(false)
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false)
@@ -35,6 +34,38 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManagerLike })
     const suffix = preset === 'default' ? 'GameObject' : preset[0].toUpperCase() + preset.slice(1)
     const gameObjectName = `${suffix}-${Date.now()}`
     gameManager.AddNewGameObject(gameObjectName)
+
+    if (preset === 'camera') {
+      const created = gameManager.GetGameObjectByName(gameObjectName)
+      if (created) {
+        if (isPlaying) {
+          const existingGameObjects = gameManager.GetGameObjects() ?? []
+          for (const go of existingGameObjects) {
+            const existingCamera = go.GetComponent?.('CameraComponent')
+            if (existingCamera?.IsAlive) {
+              existingCamera.setAlive(false)
+            }
+          }
+        }
+
+        gameManager.AddGameComponent('CameraComponent', {
+          isAlive: isPlaying,
+          isPreview: !isPlaying,
+          followMode: 'lookAt',
+          options: {
+            enabled: isPlaying,
+            moveSpeed: 12,
+            lookAtPosition: '',
+            cameraTargetDistance: 10,
+            position: { x: 0, y: 0, z: 10 }
+          }
+        }, created)
+      }
+
+      gameManager.SelectGameObjectByName(gameObjectName)
+      setIsAddMenuOpen(false)
+      return
+    }
 
     if (preset === 'skybox') {
       const created = gameManager.GetGameObjectByName(gameObjectName)
@@ -119,6 +150,7 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManagerLike })
       setProjectName(trimmedName)
 
       const lightObjectName = 'Directional Light'
+      const cameraObjectName = 'Game Camera'
 
       gameManager.LoadGameObjectsMap({
         [trimmedName]: {
@@ -157,6 +189,32 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManagerLike })
           rotation: { x: 0, y: 0, z: 0, w: 1 },
           transform: { elements: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 5, 5, 5, 1] },
           worldTransform: { elements: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 5, 5, 5, 1] }
+        },
+        [cameraObjectName]: {
+          id: 3,
+          name: cameraObjectName,
+          components: {
+            CameraComponent: {
+              name: 'CameraComponent',
+              isAlive: false,
+              isPreview: true,
+              followMode: 'lookAt',
+              options: {
+                enabled: false,
+                moveSpeed: 12,
+                lookAtPosition: '',
+                cameraTargetDistance: 10,
+                position: { x: 0, y: 0, z: 10 }
+              }
+            }
+          },
+          parent: { name: trimmedName },
+          active: true,
+          destroyed: false,
+          position: { x: 0, y: 0, z: 10 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          transform: { elements: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 10, 1] },
+          worldTransform: { elements: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 10, 1] }
         }
       })
       gameManager.SelectGameObjectByName(trimmedName)
@@ -238,7 +296,7 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManagerLike })
   const handleToggleFps = () => {
     const nextVisible = !isFpsVisible
     setIsFpsVisible(nextVisible)
-    ;(gameManager as any)?.setFpsVisible?.(nextVisible)
+    ;(gameManager as GameManager & { setFpsVisible?: (v: boolean) => void })?.setFpsVisible?.(nextVisible)
   }
 
   return (
@@ -312,12 +370,23 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManagerLike })
             <button type="button" className="sidebar-header__menu-item" onClick={() => createWithPreset('skybox')}>
               Skybox
             </button>
+            <button type="button" className="sidebar-header__menu-item" onClick={() => createWithPreset('camera')}>
+              Camera
+            </button>
           </div>
         )}
         </div>
       </div>
 
       {saveLabel && <div className="sidebar-header__save-status">{saveLabel}</div>}
+
+      <button
+        type="button"
+        className={`sidebar-header__play-button ${isPlaying ? 'active' : ''}`}
+        onClick={onTogglePlay}
+      >
+        {isPlaying ? 'Stop Playing' : 'Play'}
+      </button>
 
       <div className="sidebar-header__mode-group" role="group" aria-label="Transform controls mode">
         <button
@@ -353,3 +422,4 @@ export const SidebarHeader = ({ gameManager }: { gameManager: GameManagerLike })
     </div>
   )
 }
+

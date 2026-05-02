@@ -1,11 +1,8 @@
-import { EventStream } from '@vmlibs/unit_three'
+import { EventStream, GameComponent, GameComponentName, GameManager, GameObject, IGameCameraComponent, IGameObjectUpdatedPayload } from '@vmlibs/unit_three'
 import { useEffect, useRef, useState } from 'react';
 import { GameObjectComponent } from '../../GameObjectComponents/GameObjectComponent/GameObjectComponent';
 
-type ComponentName = 'MeshComponent' | 'LightComponent' | 'SkyboxComponent' | 'GrassComponent' | 'RigidBodyComponent' | 'ColliderComponent' | '';
-type GameManagerLike = any;
-type GameObjectLike = any;
-type GameComponentLike = any;
+type ComponentName = GameComponentName | '';
 
 const ALL_COMPONENTS: { name: ComponentName; label: string; description: string }[] = [
     { name: 'MeshComponent',    label: 'Mesh',    description: 'Renders a 3D mesh in the scene' },
@@ -14,6 +11,7 @@ const ALL_COMPONENTS: { name: ComponentName; label: string; description: string 
     { name: 'GrassComponent',   label: 'Grass',   description: 'Renders procedural grass geometry' },
     { name: 'RigidBodyComponent', label: 'RigidBody', description: 'Adds physics body properties like velocity and gravity' },
     { name: 'ColliderComponent',  label: 'Collider',  description: 'Adds collision shape for physics interaction' },
+    { name: 'CameraComponent',  label: 'Game Camera',  description: 'Controls runtime scene view and play mode camera behavior' },
 ];
 
 type ComponentEventLog = {
@@ -24,9 +22,9 @@ type ComponentEventLog = {
     time: string;
 };
 
-export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameManagerLike }) => {
-    const [selectedGameObject, setSelectedGameObject] = useState<GameObjectLike | undefined>();
-    const [components, setComponents] = useState<GameComponentLike[] | []>([]);
+export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameManager }) => {
+    const [selectedGameObject, setSelectedGameObject] = useState<GameObject | undefined>();
+    const [components, setComponents] = useState<GameComponent[]>([]);
     const [nameValue, setNameValue] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -41,12 +39,12 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
         const { emitter } = gameManager;
         emitter.on('selectedGameObject', (gameObject) => {
             setSelectedGameObject(gameObject);
-            setComponents(gameObject?.GetComponents?.() || []);
+            setComponents((gameObject?.GetComponents?.() || []) as unknown as GameComponent[]);
             setNameValue(gameObject?.Name || '');
         });
 
-        const sub = EventStream.streamTo('gameObject.updated').subscribe((payload: any) => {
-            setComponents(payload.gameObject?.GetComponents() || []);
+        const sub = EventStream.streamTo('gameObject.updated').subscribe((payload: IGameObjectUpdatedPayload) => {
+            setComponents((payload.gameObject?.GetComponents() || []) as unknown as GameComponent[]);
         });
 
         return () => sub.unsubscribe();
@@ -99,20 +97,41 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
 
     const handleAddComponent = (componentName: ComponentName) => {
         if (!selectedGameObject) return;
-        const defaultOptionsByComponent: Record<string, any> = {
+        const defaultOptionsByComponent: Partial<Record<ComponentName, Partial<IGameCameraComponent> | Record<string, unknown>>> = {
             SkyboxComponent: {
                 texture: '',
                 size: 150,
                 position: { x: 0, y: 0, z: 0 }
-            }
+            },
+            CameraComponent: {
+                isAlive: false,
+                isPreview: true,
+                followMode: 'lookAt',
+                lookAtTarget: '',
+                options: {
+                    cameraTargetDistance: 10,
+                    position: { x: 0, y: 0, z: 10 }
+                }
+            } as Partial<IGameCameraComponent>
         };
 
-        const componentData = {
-            options: defaultOptionsByComponent[componentName] || {}
-        };
+        const componentData = defaultOptionsByComponent[componentName] || {};
 
         gameManager.AddGameComponent(componentName, componentData, selectedGameObject);
-        setComponents(selectedGameObject.GetComponents?.() || []);
+
+        if (componentName === 'CameraComponent') {
+            const targetCamera = selectedGameObject.GetComponent('CameraComponent');
+            const allCameras = gameManager.CameraComponents || [];
+            allCameras.forEach((cameraComp) => {
+                if (cameraComp === targetCamera) {
+                    cameraComp?.setPreview?.(true);
+                } else {
+                    cameraComp?.setPreview?.(false);
+                }
+            });
+        }
+
+        setComponents((selectedGameObject.GetComponents?.() || []) as unknown as GameComponent[]);
         closeModal();
     };
 
@@ -263,3 +282,4 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
         </>
     )
 }
+

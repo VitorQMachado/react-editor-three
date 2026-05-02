@@ -98,6 +98,31 @@
   min-height: 14px;
 }
 
+.sidebar-header__play-button {
+  border: 1px solid #206d42;
+  background: linear-gradient(180deg, #27ad67 0%, #1f8c53 100%);
+  color: #ffffff;
+  padding: 9px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.sidebar-header__play-button:hover {
+  background: linear-gradient(180deg, #2dbf73 0%, #23965b 100%);
+}
+
+.sidebar-header__play-button.active {
+  border-color: #7e2727;
+  background: linear-gradient(180deg, #cc4d4d 0%, #a93c3c 100%);
+}
+
+.sidebar-header__play-button.active:hover {
+  background: linear-gradient(180deg, #d95a5a 0%, #b24444 100%);
+}
+
 .sidebar-header__mode-group {
   display: flex;
   border: 1px solid #151a1f;
