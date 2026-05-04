@@ -11,6 +11,12 @@ type FactoryValue = {
     callbackOptionLabels?: string[];
     componentOptions?: string[];
     componentOptionLabels?: string[];
+    actionMapOptions?: string[];
+    actionMapOptionLabels?: string[];
+    actionOptions?: string[];
+    actionOptionLabels?: string[];
+    phaseOptions?: string[];
+    phaseOptionLabels?: string[];
 };
 
 export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
@@ -18,6 +24,7 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
     const [local, setLocal] = useState<any>(value);
     const [selectedTextureName, setSelectedTextureName] = useState('');
     const [selectedTextureNamesByKey, setSelectedTextureNamesByKey] = useState<Record<string, string>>({});
+    const [isListeningKey, setIsListeningKey] = useState(false);
 
     useEffect(() => {
         setLocal(value);
@@ -88,6 +95,12 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
     const callbackOptionLabels: string[] | undefined = (item as any).callbackOptionLabels;
     const componentOptions: string[] | undefined = (item as any).componentOptions;
     const componentOptionLabels: string[] | undefined = (item as any).componentOptionLabels;
+    const actionMapOptions: string[] | undefined = (item as any).actionMapOptions;
+    const actionMapOptionLabels: string[] | undefined = (item as any).actionMapOptionLabels;
+    const actionOptions: string[] | undefined = (item as any).actionOptions;
+    const actionOptionLabels: string[] | undefined = (item as any).actionOptionLabels;
+    const phaseOptions: string[] | undefined = (item as any).phaseOptions;
+    const phaseOptionLabels: string[] | undefined = (item as any).phaseOptionLabels;
     const isDisplacementScaleField = /^Displacement Scale$/i.test(name || '');
 
     const kind = (() => {
@@ -99,6 +112,21 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
         if (Array.isArray(local)) return 'array';
         if (local && typeof local === 'object' && ['x', 'y', 'z'].every((k) => typeof local[k] === 'number'))
             return 'vector';
+        if (local && typeof local === 'object' && 'mapName' in local && 'actionName' in local && 'path' in local)
+            return 'action-binding';
+        if (local && typeof local === 'object' && 'callbackName' in local && !('actionName' in local))
+            return 'action-dispatch';
+        if (local && typeof local === 'object' && 'actionName' in local && 'phase' in local && 'callbackName' in local)
+            return 'action-callback-by-name';
+        if (
+            local &&
+            typeof local === 'object' &&
+            'actionName' in local &&
+            'phase' in local &&
+            'componentName' in local &&
+            'methodName' in local
+        )
+            return 'action-callback-by-component';
         if (local && typeof local === 'object' && 'event' in local && 'componentName' in local && 'methodName' in local)
             return 'component-mapping';
         if (local && typeof local === 'object' && 'event' in local && ('callbackName' in local || 'callback' in local))
@@ -213,6 +241,319 @@ export const ComponentInputFactory = ({ item }: { item: FactoryValue }) => {
                             />
                         </div>
                     ))}
+                </div>
+            );
+
+        case 'action-binding':
+            return (
+                <div className="inspector-vector-inputs">
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">map</label>
+                        {!!(actionMapOptions && actionMapOptions.length) ? (
+                            <select
+                                className="inspector-input inspector-select"
+                                value={String(local?.mapName || '')}
+                                disabled={typeof setValue !== 'function'}
+                                onChange={(e) => onChange({ ...local, mapName: e.target.value })}
+                            >
+                                {actionMapOptions.map((opt, idx) => (
+                                    <option key={opt} value={opt}>
+                                        {actionMapOptionLabels?.[idx] ?? opt}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <input
+                                {...commonInputProps}
+                                type="text"
+                                placeholder="ActionMap"
+                                value={String(local?.mapName || '')}
+                                onChange={(e) => onChange({ ...local, mapName: (e.target as HTMLInputElement).value })}
+                            />
+                        )}
+                    </div>
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">action</label>
+                        {!!(actionOptions && actionOptions.length) ? (
+                            <select
+                                className="inspector-input inspector-select"
+                                value={String(local?.actionName || '')}
+                                disabled={typeof setValue !== 'function'}
+                                onChange={(e) => onChange({ ...local, actionName: e.target.value })}
+                            >
+                                {actionOptions.map((opt, idx) => (
+                                    <option key={opt} value={opt}>
+                                        {actionOptionLabels?.[idx] ?? opt}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <input
+                                {...commonInputProps}
+                                type="text"
+                                placeholder="ActionName"
+                                value={String(local?.actionName || '')}
+                                onChange={(e) => onChange({ ...local, actionName: (e.target as HTMLInputElement).value })}
+                            />
+                        )}
+                    </div>
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">binding path</label>
+                        <input
+                            {...commonInputProps}
+                            type="text"
+                            placeholder="&lt;Keyboard&gt;/space"
+                            value={String(local?.path || '')}
+                            onChange={(e) => onChange({ ...local, path: (e.target as HTMLInputElement).value })}
+                        />
+                        <button
+                            type="button"
+                            className="inspector-callback-registry__add inspector-inline-action-button"
+                            disabled={typeof setValue !== 'function' || isListeningKey}
+                            onClick={() => {
+                                setIsListeningKey(true);
+
+                                const onKeyDown = (event: KeyboardEvent) => {
+                                    event.preventDefault();
+                                    const key = String(event.key || '').toLowerCase();
+                                    if (!key) {
+                                        setIsListeningKey(false);
+                                        return;
+                                    }
+
+                                    const normalizedKey = key === ' ' ? 'space' : key;
+                                    onChange({ ...local, path: `<Keyboard>/${normalizedKey}` });
+                                    setIsListeningKey(false);
+                                };
+
+                                window.addEventListener('keydown', onKeyDown, { once: true });
+                            }}
+                        >
+                            {isListeningKey ? 'Press key...' : 'Listen Key'}
+                        </button>
+                    </div>
+                </div>
+            );
+
+        case 'action-dispatch':
+            return (
+                <div className="inspector-vector-inputs">
+                    <div className="inspector-vector-inputs__axis">
+                        {!!(callbackOptions && callbackOptions.length) && (
+                            <>
+                                <label className="inspector-vector-inputs__label">registered names</label>
+                                <select
+                                    className="inspector-input inspector-select"
+                                    value={String(local?.callbackName || '')}
+                                    disabled={typeof setValue !== 'function'}
+                                    onChange={(e) => setLocal({ ...local, callbackName: e.target.value })}
+                                >
+                                    {callbackOptions.map((opt, idx) => (
+                                        <option key={opt} value={opt}>
+                                            {callbackOptionLabels?.[idx] ?? opt}
+                                        </option>
+                                    ))}
+                                </select>
+                            </>
+                        )}
+                        <label className="inspector-vector-inputs__label">event name</label>
+                        <input
+                            {...commonInputProps}
+                            type="text"
+                            placeholder="onCustomAction"
+                            value={String(local?.callbackName || '')}
+                            onChange={(e) => setLocal({ ...local, callbackName: (e.target as HTMLInputElement).value })}
+                        />
+                    </div>
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">dispatch</label>
+                        <button
+                            type="button"
+                            className="inspector-callback-registry__add inspector-inline-action-button"
+                            disabled={typeof setValue !== 'function'}
+                            onClick={() => {
+                                if (typeof setValue === 'function') {
+                                    setValue(local);
+                                }
+                            }}
+                        >
+                            Dispatch
+                        </button>
+                    </div>
+                </div>
+            );
+
+        case 'action-callback-by-name':
+            return (
+                <div className="inspector-vector-inputs">
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">action</label>
+                        {!!(actionOptions && actionOptions.length) ? (
+                            <select
+                                className="inspector-input inspector-select"
+                                value={String(local?.actionName || '')}
+                                disabled={typeof setValue !== 'function'}
+                                onChange={(e) => onChange({ ...local, actionName: e.target.value })}
+                            >
+                                {actionOptions.map((opt, idx) => (
+                                    <option key={opt} value={opt}>
+                                        {actionOptionLabels?.[idx] ?? opt}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <input
+                                {...commonInputProps}
+                                type="text"
+                                placeholder="ActionName"
+                                value={String(local?.actionName || '')}
+                                onChange={(e) => onChange({ ...local, actionName: (e.target as HTMLInputElement).value })}
+                            />
+                        )}
+                    </div>
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">phase</label>
+                        {!!(phaseOptions && phaseOptions.length) ? (
+                            <select
+                                className="inspector-input inspector-select"
+                                value={String(local?.phase || '')}
+                                disabled={typeof setValue !== 'function'}
+                                onChange={(e) => onChange({ ...local, phase: e.target.value })}
+                            >
+                                {phaseOptions.map((opt, idx) => (
+                                    <option key={opt} value={opt}>
+                                        {phaseOptionLabels?.[idx] ?? opt}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <input
+                                {...commonInputProps}
+                                type="text"
+                                placeholder="performed"
+                                value={String(local?.phase || '')}
+                                onChange={(e) => onChange({ ...local, phase: (e.target as HTMLInputElement).value })}
+                            />
+                        )}
+                    </div>
+                    <div className="inspector-vector-inputs__axis">
+                        {!!(callbackOptions && callbackOptions.length) && (
+                            <>
+                                <label className="inspector-vector-inputs__label">saved callbacks</label>
+                                <select
+                                    className="inspector-input inspector-select"
+                                    value={String(local?.callbackName || '')}
+                                    disabled={typeof setValue !== 'function'}
+                                    onChange={(e) => onChange({ ...local, callbackName: e.target.value })}
+                                >
+                                    {callbackOptions.map((opt, idx) => (
+                                        <option key={opt} value={opt}>
+                                            {callbackOptionLabels?.[idx] ?? opt}
+                                        </option>
+                                    ))}
+                                </select>
+                            </>
+                        )}
+                        <label className="inspector-vector-inputs__label">callback</label>
+                        <input
+                            {...commonInputProps}
+                            type="text"
+                            placeholder="onJump"
+                            value={String(local?.callbackName || '')}
+                            onChange={(e) => onChange({ ...local, callbackName: (e.target as HTMLInputElement).value })}
+                        />
+                    </div>
+                </div>
+            );
+
+        case 'action-callback-by-component':
+            return (
+                <div className="inspector-vector-inputs">
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">action</label>
+                        {!!(actionOptions && actionOptions.length) ? (
+                            <select
+                                className="inspector-input inspector-select"
+                                value={String(local?.actionName || '')}
+                                disabled={typeof setValue !== 'function'}
+                                onChange={(e) => onChange({ ...local, actionName: e.target.value })}
+                            >
+                                {actionOptions.map((opt, idx) => (
+                                    <option key={opt} value={opt}>
+                                        {actionOptionLabels?.[idx] ?? opt}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <input
+                                {...commonInputProps}
+                                type="text"
+                                placeholder="ActionName"
+                                value={String(local?.actionName || '')}
+                                onChange={(e) => onChange({ ...local, actionName: (e.target as HTMLInputElement).value })}
+                            />
+                        )}
+                    </div>
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">phase</label>
+                        {!!(phaseOptions && phaseOptions.length) ? (
+                            <select
+                                className="inspector-input inspector-select"
+                                value={String(local?.phase || '')}
+                                disabled={typeof setValue !== 'function'}
+                                onChange={(e) => onChange({ ...local, phase: e.target.value })}
+                            >
+                                {phaseOptions.map((opt, idx) => (
+                                    <option key={opt} value={opt}>
+                                        {phaseOptionLabels?.[idx] ?? opt}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <input
+                                {...commonInputProps}
+                                type="text"
+                                placeholder="performed"
+                                value={String(local?.phase || '')}
+                                onChange={(e) => onChange({ ...local, phase: (e.target as HTMLInputElement).value })}
+                            />
+                        )}
+                    </div>
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">component</label>
+                        {!!(componentOptions && componentOptions.length) ? (
+                            <select
+                                className="inspector-input inspector-select"
+                                value={String(local?.componentName || '')}
+                                disabled={typeof setValue !== 'function'}
+                                onChange={(e) => onChange({ ...local, componentName: e.target.value })}
+                            >
+                                {componentOptions.map((opt, idx) => (
+                                    <option key={opt} value={opt}>
+                                        {componentOptionLabels?.[idx] ?? opt}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <input
+                                {...commonInputProps}
+                                type="text"
+                                placeholder="ComponentName"
+                                value={String(local?.componentName || '')}
+                                onChange={(e) => onChange({ ...local, componentName: (e.target as HTMLInputElement).value })}
+                            />
+                        )}
+                    </div>
+                    <div className="inspector-vector-inputs__axis">
+                        <label className="inspector-vector-inputs__label">method</label>
+                        <input
+                            {...commonInputProps}
+                            type="text"
+                            placeholder="methodName"
+                            value={String(local?.methodName || '')}
+                            onChange={(e) => onChange({ ...local, methodName: (e.target as HTMLInputElement).value })}
+                        />
+                    </div>
                 </div>
             );
 
