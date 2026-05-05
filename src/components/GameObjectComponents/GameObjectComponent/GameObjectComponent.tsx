@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import ComponentInputFactory from './ComponentInputFactory';
+import ComponentInputFactory from '../../InputFactory/InputFactory';
 import { getOriginalPathForBlob } from '../../../services';
 import { FollowMode, GameComponent, GameComponentNameEnum, IFactoryValue } from '@vmlibs/unit_three';
 import './styles.css';
