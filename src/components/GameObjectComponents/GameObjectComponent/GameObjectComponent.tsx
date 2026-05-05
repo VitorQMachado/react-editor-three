@@ -1,66 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import ComponentInputFactory from '../../InputFactory/InputFactory';
 import { getOriginalPathForBlob } from '../../../services';
 import { FollowMode, GameComponent, GameComponentNameEnum, IFactoryValue } from '@vmlibs/unit_three';
+import { GroupedFactoryFields } from './GroupedFactoryFields';
+import { InputActionsModal } from './InputActionsModal';
+import {
+    ACTION_PHASE_OPTIONS,
+    CAMERA_FOLLOW_MODE_OPTIONS,
+    COMPONENT_METHOD_BLACKLIST,
+    DEFAULT_INPUT_ACTIONS,
+    DEG_TO_RAD,
+    LIGHT_TYPE_OPTIONS,
+    RAD_TO_DEG,
+} from './constants';
+import { buildGroupedFactoryRows, isRotationAxisItem } from './helpers';
 import './styles.css';
-
-const RAD_TO_DEG = 180 / Math.PI;
-const DEG_TO_RAD = Math.PI / 180;
-const ACTION_PHASE_OPTIONS = ['started', 'performed', 'canceled'] as const;
-const DEFAULT_INPUT_ACTIONS = ['move left', 'move right', 'MoveUp', 'MoveDown', 'fire', 'jump'] as const;
-const MOUSE_BINDING_OPTIONS = [
-    '<Mouse>/leftButton',
-    '<Mouse>/rightButton',
-    '<Mouse>/middleButton',
-    '<Mouse>/scroll/x',
-    '<Mouse>/scroll/y',
-    '<Mouse>/delta/x',
-    '<Mouse>/delta/y',
-] as const;
-const COMPONENT_METHOD_BLACKLIST = new Set([
-    'constructor',
-    'dispose',
-    'destroy',
-    'update',
-    'init',
-    'initialize',
-    'start',
-    'awake',
-    'onenable',
-    'ondisable',
-    'ondestroy',
-]);
-
-const isRotationAxisItem = (name: string) => /rotation/i.test(name) && /\s[XYZ]$/i.test(name);
-
-const extractBindingPathFromAction = (action: any): string => {
-    if (!action || typeof action !== 'object') {
-        return '';
-    }
-
-    if (typeof action.path === 'string' && action.path.trim()) {
-        return action.path.trim();
-    }
-
-    const candidates = [action.bindings, action.Bindings, action.binding, action.Binding];
-    for (const candidate of candidates) {
-        if (Array.isArray(candidate)) {
-            const first = candidate.find((entry: any) => typeof entry?.path === 'string' && entry.path.trim());
-            if (first?.path) {
-                return String(first.path).trim();
-            }
-        }
-
-        if (candidate && typeof candidate === 'object' && typeof (candidate as any).path === 'string') {
-            const nestedPath = String((candidate as any).path || '').trim();
-            if (nestedPath) {
-                return nestedPath;
-            }
-        }
-    }
-
-    return '';
-};
 
 export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { gameComponent: GameComponent }) => {
     const gameComponent = gameComponentProp as any;
@@ -227,29 +180,6 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
         return names.length ? names : [...DEFAULT_INPUT_ACTIONS];
     }, [currentActionMap]);
 
-    const [selectedActionName, setSelectedActionName] = useState<string>(DEFAULT_INPUT_ACTIONS[0]);
-    const [bindingPathInput, setBindingPathInput] = useState<string>('<Keyboard>/space');
-    const [actionBindingDraftByName, setActionBindingDraftByName] = useState<Record<string, string>>({});
-    const [selectedMouseBinding, setSelectedMouseBinding] = useState<string>(MOUSE_BINDING_OPTIONS[0]);
-    const [isListeningBindingKey, setIsListeningBindingKey] = useState(false);
-    const [selectedCallbackPhase, setSelectedCallbackPhase] = useState<string>(ACTION_PHASE_OPTIONS[1]);
-    const [selectedCallbackComponent, setSelectedCallbackComponent] = useState<string>('');
-    const [selectedCallbackMethod, setSelectedCallbackMethod] = useState<string>('');
-
-    useEffect(() => {
-        if (!currentActionNames.length) {
-            return;
-        }
-
-        if (!currentActionNames.includes(selectedActionName)) {
-            setSelectedActionName(currentActionNames[0]);
-        }
-    }, [currentActionNames, selectedActionName]);
-
-    useEffect(() => {
-        setActionBindingDraftByName({});
-    }, [currentActionMapName]);
-
     const callbackNameOptions = useMemo(() => registeredActionCallbackNames, [registeredActionCallbackNames]);
     const factory = gameComponent?.Factory;
     const rawList: IFactoryValue[] = (factory?.valuesList || []).filter((item: IFactoryValue) => {
@@ -271,15 +201,8 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
         // Keep camera runtime toggles out of the inspector to avoid conflicting with play/editor flow.
         return !/^is\s*(alive|preview)$/i.test(itemName);
     });
-    const lightTypeOptions = [
-        'DirectionalLight',
-        'PointLight',
-        'SpotLight',
-        'AmbientLight',
-        'HemisphereLight',
-        'RectAreaLight',
-    ];
-    const cameraFollowModeOptions: FollowMode[] = ['lookAt', 'follow'];
+    const lightTypeOptions = [...LIGHT_TYPE_OPTIONS];
+    const cameraFollowModeOptions: FollowMode[] = [...CAMERA_FOLLOW_MODE_OPTIONS];
 
     const valuesList = rawList.map((item) => {
         const itemName = item.name || '';
@@ -681,109 +604,32 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
         return byComponent;
     }, [gameComponent]);
 
-    const callbackComponentNames = useMemo(() => Array.from(componentMethodOptions.keys()), [componentMethodOptions]);
-    const callbackMethodNames = useMemo(
-        () => componentMethodOptions.get(selectedCallbackComponent) || [],
-        [componentMethodOptions, selectedCallbackComponent]
-    );
-
-    useEffect(() => {
-        if (!callbackComponentNames.length) {
-            if (selectedCallbackComponent) {
-                setSelectedCallbackComponent('');
-            }
-            return;
-        }
-
-        if (!callbackComponentNames.includes(selectedCallbackComponent)) {
-            setSelectedCallbackComponent(callbackComponentNames[0]);
-        }
-    }, [callbackComponentNames, selectedCallbackComponent]);
-
-    useEffect(() => {
-        if (!callbackMethodNames.length) {
-            if (selectedCallbackMethod) {
-                setSelectedCallbackMethod('');
-            }
-            return;
-        }
-
-        if (!callbackMethodNames.includes(selectedCallbackMethod)) {
-            setSelectedCallbackMethod(callbackMethodNames[0]);
-        }
-    }, [callbackMethodNames, selectedCallbackMethod]);
-
-    const selectedActionBindingPath = useMemo(() => {
-        const actionName = String(selectedActionName || '').trim();
-        if (!actionName) {
-            return '<Keyboard>/space';
-        }
-
-        const draftPath = actionBindingDraftByName[actionName];
-        if (draftPath) {
-            return draftPath;
-        }
-
-        const actions = Array.isArray(currentActionMap?.actions) ? currentActionMap.actions : [];
-        const selectedAction = actions.find((action: any) => String(action?.name || '').trim() === actionName);
-        const resolvedPath = extractBindingPathFromAction(selectedAction);
-        return resolvedPath || '<Keyboard>/space';
-    }, [actionBindingDraftByName, currentActionMap, selectedActionName]);
-
-    useEffect(() => {
-        setBindingPathInput(selectedActionBindingPath);
-    }, [selectedActionBindingPath]);
-
-    const applyActionBinding = (path: string) => {
+    const applyActionBinding = (actionName: string, path: string) => {
         const normalizedPath = String(path || '').trim();
-        const actionName = String(selectedActionName || '').trim();
-        if (!normalizedPath || !actionName || !setActionBindingItem?.setValue) {
+        const normalizedActionName = String(actionName || '').trim();
+        if (!normalizedPath || !normalizedActionName || !setActionBindingItem?.setValue) {
             return;
         }
 
-        setActionBindingDraftByName((prev) => ({
-            ...prev,
-            [actionName]: normalizedPath,
-        }));
-        setBindingPathInput(normalizedPath);
-
-        updateCurrentActionMapActions([...currentActionNames, actionName]);
+        updateCurrentActionMapActions([...currentActionNames, normalizedActionName]);
         (setActionBindingItem as any).setValue?.({
             mapName: currentActionMapName,
-            actionName,
+            actionName: normalizedActionName,
             path: normalizedPath,
         });
     };
 
-    const handleListenForBindingKey = () => {
-        if (isListeningBindingKey) {
-            return;
-        }
-
-        setIsListeningBindingKey(true);
-        const onKeyDown = (event: KeyboardEvent) => {
-            event.preventDefault();
-            const key = String(event.key || '').toLowerCase();
-            if (!key) {
-                setIsListeningBindingKey(false);
-                return;
-            }
-
-            const normalizedKey = key === ' ' ? 'space' : key;
-            const keyPath = `<Keyboard>/${normalizedKey}`;
-            setBindingPathInput(keyPath);
-            applyActionBinding(keyPath);
-            setIsListeningBindingKey(false);
-        };
-
-        window.addEventListener('keydown', onKeyDown, { once: true });
-    };
-
-    const handleAddComponentFunctionCallback = () => {
-        const actionName = String(selectedActionName || '').trim();
-        const componentName = String(selectedCallbackComponent || '').trim();
-        const methodName = String(selectedCallbackMethod || '').trim();
-        if (!actionName || !componentName || !methodName || !setActionCallbackByComponentItem?.setValue) {
+    const handleAddComponentFunctionCallback = (payload: {
+        actionName: string;
+        phase: string;
+        componentName: string;
+        methodName: string;
+    }) => {
+        const actionName = String(payload?.actionName || '').trim();
+        const phase = String(payload?.phase || '').trim();
+        const componentName = String(payload?.componentName || '').trim();
+        const methodName = String(payload?.methodName || '').trim();
+        if (!actionName || !phase || !componentName || !methodName || !setActionCallbackByComponentItem?.setValue) {
             return;
         }
 
@@ -791,94 +637,13 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
         (setActionCallbackByComponentItem as any).setValue?.({
             mapName: currentActionMapName,
             actionName,
-            phase: selectedCallbackPhase,
+            phase,
             componentName,
             methodName,
         });
     };
 
-    const groupedRows: Array<{ type: 'single'; item: any } | { type: 'xyz'; label: string; x: any; y: any; z: any }> =
-        [];
-
-    const usedIndices = new Set<number>();
-
-    valuesList.forEach((item, index) => {
-        if (usedIndices.has(index)) {
-            return;
-        }
-
-        const match = item.name?.match(/^(.*)\s([XYZ])$/i);
-        if (!match) {
-            groupedRows.push({ type: 'single', item });
-            usedIndices.add(index);
-            return;
-        }
-
-        const baseName = match[1].trim();
-        const byAxis = { X: -1, Y: -1, Z: -1 };
-
-        valuesList.forEach((candidate, candidateIndex) => {
-            const axisMatch = candidate.name?.match(/^(.*)\s([XYZ])$/i);
-            if (!axisMatch) return;
-
-            const candidateBase = axisMatch[1].trim();
-            const axis = axisMatch[2].toUpperCase() as 'X' | 'Y' | 'Z';
-
-            if (candidateBase === baseName) {
-                byAxis[axis] = candidateIndex;
-            }
-        });
-
-        if (byAxis.X >= 0 && byAxis.Y >= 0 && byAxis.Z >= 0) {
-            groupedRows.push({
-                type: 'xyz',
-                label: baseName,
-                x: valuesList[byAxis.X],
-                y: valuesList[byAxis.Y],
-                z: valuesList[byAxis.Z],
-            });
-            usedIndices.add(byAxis.X);
-            usedIndices.add(byAxis.Y);
-            usedIndices.add(byAxis.Z);
-            return;
-        }
-
-        groupedRows.push({ type: 'single', item });
-        usedIndices.add(index);
-    });
-
-    const renderGroupedRows = (rows: typeof groupedRows) => {
-        return rows.map((row) => {
-            if (row.type === 'single') {
-                return (
-                    <div key={row.item.name} className="inspector-component__field">
-                        <label className="inspector-component__field-label">{row.item.name}</label>
-                        <ComponentInputFactory item={row.item} />
-                    </div>
-                );
-            }
-
-            return (
-                <div key={row.label} className="inspector-component__field inspector-component__field--xyz">
-                    <label className="inspector-component__field-label">{row.label}</label>
-                    <div className="inspector-component__xyz-inputs">
-                        <div className="inspector-component__xyz-input">
-                            <label className="inspector-vector-inputs__label">X</label>
-                            <ComponentInputFactory item={row.x} />
-                        </div>
-                        <div className="inspector-component__xyz-input">
-                            <label className="inspector-vector-inputs__label">Y</label>
-                            <ComponentInputFactory item={row.y} />
-                        </div>
-                        <div className="inspector-component__xyz-input">
-                            <label className="inspector-vector-inputs__label">Z</label>
-                            <ComponentInputFactory item={row.z} />
-                        </div>
-                    </div>
-                </div>
-            );
-        });
-    };
+    const groupedRows = useMemo(() => buildGroupedFactoryRows(valuesList), [valuesList]);
 
     return (
         <div key={`game-object-component-${gameComponent.NAME}`} className="inspector-component">
@@ -942,182 +707,21 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
                         </>
                     )}
                     <div className="inspector-component__fields">
-                        {!isInputComponent && renderGroupedRows(groupedRows)}
+                        {!isInputComponent && <GroupedFactoryFields rows={groupedRows} />}
                     </div>
                 </>
             )}
 
-            {isInputComponent && isInputModalOpen && (
-                <div className="inspector-modal-overlay" onClick={() => setIsInputModalOpen(false)}>
-                    <div className="inspector-modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="inspector-modal__header">
-                            <div className="inspector-modal__title">Input Action Configuration</div>
-                            <button
-                                type="button"
-                                className="inspector-modal__close"
-                                onClick={() => setIsInputModalOpen(false)}
-                            >
-                                Close
-                            </button>
-                        </div>
-
-                        <div className="inspector-modal__body inspector-input-modal-layout">
-                            <div className="inspector-input-modal-column inspector-input-modal-column--left">
-                                <div className="inspector-input-actions-list">
-                                    <div className="inspector-input-actions-list__title">Actions</div>
-                                    <div className="inspector-input-actions-list__items inspector-input-actions-list__items--stacked">
-                                        {currentActionNames.map((actionName) => {
-                                            const isSelected = actionName === selectedActionName;
-                                            return (
-                                                <button
-                                                    key={actionName}
-                                                    type="button"
-                                                    className={`inspector-input-actions-list__item-button ${
-                                                        isSelected ? 'is-selected' : ''
-                                                    }`}
-                                                    onClick={() => setSelectedActionName(actionName)}
-                                                >
-                                                    {actionName}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                    <button
-                                        type="button"
-                                        className="inspector-callback-registry__add inspector-input-actions-list__add"
-                                        onClick={handleAddInputAction}
-                                    >
-                                        Add Action
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="inspector-input-modal-column inspector-input-modal-column--right">
-                                <div className="inspector-input-panel">
-                                    <div className="inspector-input-panel__title">Selected Action</div>
-                                    <div className="inspector-input-panel__value">{selectedActionName || '-'}</div>
-                                </div>
-
-                                <div className="inspector-input-panel">
-                                    <div className="inspector-input-panel__title">Add Key Binding</div>
-                                    <div className="inspector-input-panel__row">
-                                        <input
-                                            className="inspector-input"
-                                            type="text"
-                                            value={bindingPathInput}
-                                            onChange={(e) => setBindingPathInput((e.target as HTMLInputElement).value)}
-                                            placeholder="&lt;Keyboard&gt;/space"
-                                        />
-                                    </div>
-                                    <div className="inspector-input-panel__row inspector-input-panel__row--actions">
-                                        <button
-                                            type="button"
-                                            className="inspector-callback-registry__add"
-                                            onClick={handleListenForBindingKey}
-                                            disabled={isListeningBindingKey}
-                                        >
-                                            {isListeningBindingKey ? 'Listening...' : 'Listen Key'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="inspector-callback-registry__add"
-                                            onClick={() => applyActionBinding(bindingPathInput)}
-                                        >
-                                            Add Key
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="inspector-input-panel">
-                                    <div className="inspector-input-panel__title">Add Mouse Binding</div>
-                                    <div className="inspector-input-panel__row">
-                                        <select
-                                            className="inspector-input inspector-select"
-                                            value={selectedMouseBinding}
-                                            onChange={(e) => setSelectedMouseBinding(e.target.value)}
-                                        >
-                                            {MOUSE_BINDING_OPTIONS.map((option) => (
-                                                <option key={option} value={option}>
-                                                    {option}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="inspector-input-panel__row inspector-input-panel__row--actions">
-                                        <button
-                                            type="button"
-                                            className="inspector-callback-registry__add"
-                                            onClick={() => applyActionBinding(selectedMouseBinding)}
-                                        >
-                                            Add Mouse
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="inspector-input-panel">
-                                    <div className="inspector-input-panel__title">Call Component Function</div>
-                                    <div className="inspector-input-panel__grid">
-                                        <div>
-                                            <label className="inspector-vector-inputs__label">Phase</label>
-                                            <select
-                                                className="inspector-input inspector-select"
-                                                value={selectedCallbackPhase}
-                                                onChange={(e) => setSelectedCallbackPhase(e.target.value)}
-                                            >
-                                                {ACTION_PHASE_OPTIONS.map((phase) => (
-                                                    <option key={phase} value={phase}>
-                                                        {phase}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="inspector-vector-inputs__label">Component</label>
-                                            <select
-                                                className="inspector-input inspector-select"
-                                                value={selectedCallbackComponent}
-                                                onChange={(e) => setSelectedCallbackComponent(e.target.value)}
-                                                disabled={!callbackComponentNames.length}
-                                            >
-                                                {callbackComponentNames.map((componentName) => (
-                                                    <option key={componentName} value={componentName}>
-                                                        {componentName}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="inspector-vector-inputs__label">Function</label>
-                                            <select
-                                                className="inspector-input inspector-select"
-                                                value={selectedCallbackMethod}
-                                                onChange={(e) => setSelectedCallbackMethod(e.target.value)}
-                                                disabled={!callbackMethodNames.length}
-                                            >
-                                                {callbackMethodNames.map((methodName) => (
-                                                    <option key={methodName} value={methodName}>
-                                                        {methodName}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="inspector-input-panel__row inspector-input-panel__row--actions">
-                                        <button
-                                            type="button"
-                                            className="inspector-callback-registry__add"
-                                            onClick={handleAddComponentFunctionCallback}
-                                            disabled={!selectedCallbackComponent || !selectedCallbackMethod}
-                                        >
-                                            Add Function Call
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <InputActionsModal
+                isOpen={isInputComponent && isInputModalOpen}
+                onClose={() => setIsInputModalOpen(false)}
+                currentActionNames={currentActionNames}
+                currentActionMap={currentActionMap}
+                componentMethodOptions={componentMethodOptions}
+                onAddInputAction={handleAddInputAction}
+                onApplyActionBinding={applyActionBinding}
+                onAddComponentFunctionCallback={handleAddComponentFunctionCallback}
+            />
         </div>
     );
 };
