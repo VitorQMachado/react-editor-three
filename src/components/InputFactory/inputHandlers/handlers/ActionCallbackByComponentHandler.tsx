@@ -83,7 +83,9 @@ export class ActionCallbackByComponentHandler implements IInputTypeHandler {
                             type="text"
                             placeholder="ComponentName"
                             value={String(value?.componentName || '')}
-                            onChange={(e) => onChange({ ...value, componentName: (e.target as HTMLInputElement).value })}
+                            onChange={(e) =>
+                                onChange({ ...value, componentName: (e.target as HTMLInputElement).value })
+                            }
                         />
                     )}
                 </div>

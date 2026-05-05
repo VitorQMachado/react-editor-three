@@ -1,18 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getOriginalPathForBlob } from '../../../services';
-import { FollowMode, GameComponent, GameComponentNameEnum, IFactoryValue } from '@vmlibs/unit_three';
+import { GameComponent, IFactoryValue } from '@vmlibs/unit_three';
 import { GroupedFactoryFields } from './GroupedFactoryFields';
 import { InputActionsModal } from './InputActionsModal';
 import {
-    ACTION_PHASE_OPTIONS,
     CAMERA_FOLLOW_MODE_OPTIONS,
-    COMPONENT_METHOD_BLACKLIST,
     DEFAULT_INPUT_ACTIONS,
     DEG_TO_RAD,
     LIGHT_TYPE_OPTIONS,
     RAD_TO_DEG,
 } from './constants';
 import { buildGroupedFactoryRows, isRotationAxisItem } from './helpers';
+import { shouldIncludeFactoryItem, transformFactoryValue } from './factoryValueStrategies';
 import './styles.css';
 
 export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { gameComponent: GameComponent }) => {
@@ -20,9 +19,9 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [registeredActionCallbackNames, setRegisteredActionCallbackNames] = useState<string[]>([]);
     const [isInputModalOpen, setIsInputModalOpen] = useState(false);
-    const [inputEventLogs, setInputEventLogs] = useState<Array<{ id: string; label: string; detail: string; time: string }>>(
-        []
-    );
+    const [inputEventLogs, setInputEventLogs] = useState<
+        Array<{ id: string; label: string; detail: string; time: string }>
+    >([]);
     const [actionMapsState, setActionMapsState] = useState<any[]>(() => {
         if (!Array.isArray(gameComponent?.ActionMaps)) {
             return [];
@@ -69,7 +68,9 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
             }
 
             const property = String(payload?.property || 'updated');
-            if (!/dispatchRegisteredEvent|actionCallbackByName|actionCallbackByComponent|actionBinding/i.test(property)) {
+            if (
+                !/dispatchRegisteredEvent|actionCallbackByName|actionCallbackByComponent|actionBinding/i.test(property)
+            ) {
                 return;
             }
 
@@ -95,7 +96,10 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
         }
         return actionMapsState;
     }, [actionMapsState]);
-    const actionMapNames = useMemo(() => actionMaps.map((map) => String(map?.name || '')).filter(Boolean), [actionMaps]);
+    const actionMapNames = useMemo(
+        () => actionMaps.map((map) => String(map?.name || '')).filter(Boolean),
+        [actionMaps]
+    );
     const currentActionMapName =
         String(gameComponent?.CurrentActionMap || actionMapNames[0] || 'Gameplay').trim() || 'Gameplay';
     const currentActionMap = useMemo(
@@ -158,7 +162,13 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
     };
 
     const handleAddInputAction = () => {
-        const existingActionNames = new Set(currentActionNames.map((name) => String(name || '').trim().toLowerCase()));
+        const existingActionNames = new Set(
+            currentActionNames.map((name) =>
+                String(name || '')
+                    .trim()
+                    .toLowerCase()
+            )
+        );
         const baseName = 'new action';
         let suffix = 1;
         let nextActionName = `${baseName} ${suffix}`;
@@ -184,374 +194,32 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
     const factory = gameComponent?.Factory;
     const rawList: IFactoryValue[] = (factory?.valuesList || []).filter((item: IFactoryValue) => {
         const itemName = item.name || '';
-        if (gameComponent.NAME !== 'CameraComponent') {
-            if (
-                gameComponent.NAME === 'InputComponent' &&
-                (/^set\s*mapping$/i.test(itemName) ||
-                    /^set\s*mapping\s*by\s*name$/i.test(itemName) ||
-                    /^set\s*mapping\s*by\s*component$/i.test(itemName) ||
-                    /^auto\s*bind$/i.test(itemName) ||
-                    /^binding\s*events$/i.test(itemName))
-            ) {
-                return false;
-            }
-            return true;
-        }
-
-        // Keep camera runtime toggles out of the inspector to avoid conflicting with play/editor flow.
-        return !/^is\s*(alive|preview)$/i.test(itemName);
+        return shouldIncludeFactoryItem(gameComponent.NAME, itemName);
     });
     const lightTypeOptions = [...LIGHT_TYPE_OPTIONS];
-    const cameraFollowModeOptions: FollowMode[] = [...CAMERA_FOLLOW_MODE_OPTIONS];
+    const cameraFollowModeOptions = [...CAMERA_FOLLOW_MODE_OPTIONS];
 
-    const valuesList = rawList.map((item) => {
-        const itemName = item.name || '';
-        if (gameComponent.NAME === 'LightComponent' && /^Type$/i.test(itemName)) {
-            const setLightType = (nextType: string) => {
-                let updated = false;
-
-                if (typeof item.setValue === 'function') {
-                    item.setValue(nextType);
-                    updated = true;
-                }
-
-                // Fallback for LightComponent implementations that expose mutable options but no setValue.
-                const optionTargets = [
-                    gameComponent?.options,
-                    gameComponent?.Options,
-                    gameComponent?.params,
-                    gameComponent?.Params,
-                    gameComponent?.data?.options,
-                    gameComponent?.Data?.options,
-                ];
-
-                optionTargets.forEach((target) => {
-                    if (target && typeof target === 'object' && 'type' in target) {
-                        (target as any).type = nextType;
-                        updated = true;
-                    }
-                });
-
-                if (!updated) {
-                    console.warn('[inspector-light] unable to set Light type: no writable setter/target found', {
-                        itemName,
-                        nextType,
-                    });
-                    return;
-                }
-
-                const manager = gameComponent?.Manager;
-                manager?.emitter?.emit?.('transformControl-change');
-                manager?.emitter?.emit?.('updatedGameObject', gameComponent?.Parent);
-                manager?.emitter?.emit?.('component.updated', {
-                    component: gameComponent?.NAME,
-                    property: 'type',
-                    value: nextType,
-                });
-            };
-
-            return {
-                ...item,
-                options: lightTypeOptions,
-                optionLabels: lightTypeOptions,
-                setValue: setLightType,
-            };
-        }
-
-        if (gameComponent.NAME === 'CameraComponent' && /^follow\s*mode$/i.test(itemName)) {
-            return {
-                ...item,
-                options: cameraFollowModeOptions,
-                optionLabels: cameraFollowModeOptions,
-                setValue: (nextMode: string) => {
-                    item.setValue?.(nextMode);
-                    const manager = gameComponent?.Manager;
-                    manager?.emitter?.emit?.('updatedGameObject', gameComponent?.Parent);
-                    manager?.emitter?.emit?.('component.updated', {
-                        component: gameComponent?.NAME,
-                        property: 'followMode',
-                        value: nextMode,
-                    });
-                },
-            };
-        }
-
-        if (gameComponent.NAME === 'SkyboxComponent' && /^Textures$/i.test(itemName)) {
-            const setSkyboxTextures = (nextTextures: Record<string, string>) => {
-                const runtimeTextures = Object.entries(nextTextures || {}).reduce(
-                    (acc, [key, texturePath]) => {
-                        acc[key] = String(texturePath || '');
-                        return acc;
-                    },
-                    {} as Record<string, string>
-                );
-
-                console.log('[skybox] updated textures', {
-                    gameObject: gameComponent?.Parent?.Name,
-                    runtimeTextures,
-                    sourceTextures: Object.entries(runtimeTextures).reduce(
-                        (acc, [key, texturePath]) => {
-                            acc[key] = getOriginalPathForBlob(texturePath);
-                            return acc;
-                        },
-                        {} as Record<string, string>
-                    ),
-                });
-
-                if (typeof item.setValue === 'function') {
-                    item.setValue(runtimeTextures);
-                }
-
-                const params = gameComponent?.params || {};
-                params.options = {
-                    ...(params.options || {}),
-                    textures: runtimeTextures,
-                };
-                if (!params.parentMesh && gameComponent?.Manager?.scene) {
-                    params.parentMesh = gameComponent.Manager.scene;
-                }
-
-                if (typeof gameComponent?.loadSkybox === 'function') {
-                    gameComponent.loadSkybox(params);
-                }
-
-                const manager = gameComponent?.Manager;
-                // Do NOT emit 'transformControl-change' here: loadSkybox replaces the mesh,
-                // so the old object is detached from the scene and TransformControls would
-                // throw "The attached 3D object must be a part of the scene graph".
-                manager?.emitter?.emit?.('updatedGameObject', gameComponent?.Parent);
-                manager?.emitter?.emit?.('component.updated', {
-                    component: gameComponent?.NAME,
-                    property: 'Textures',
-                    value: Object.entries(runtimeTextures).reduce(
-                        (acc, [key, texturePath]) => {
-                            acc[key] = getOriginalPathForBlob(texturePath);
-                            return acc;
-                        },
-                        {} as Record<string, string>
-                    ),
-                });
-            };
-
-            return {
-                ...item,
-                value: item.value || {},
-                setValue: setSkyboxTextures,
-            };
-        }
-
-        if (gameComponent.NAME === 'InputComponent' && /^Current Action Map$/i.test(itemName)) {
-            const setCurrentActionMap = (nextMapName: string) => {
-                const mapName = String(nextMapName || '').trim();
-                if (!mapName) {
-                    return;
-                }
-
-                item.setValue?.(mapName);
-
-                const manager = gameComponent?.Manager;
-                manager?.emitter?.emit?.('updatedGameObject', gameComponent?.Parent);
-                manager?.emitter?.emit?.('component.updated', {
-                    component: gameComponent?.NAME,
-                    property: 'currentActionMap',
-                    value: mapName,
-                });
-            };
-
-            return {
-                ...item,
-                value: item.value || currentActionMapName,
-                options: actionMapNames,
-                optionLabels: actionMapNames,
-                setValue: setCurrentActionMap,
-            };
-        }
-
-        if (gameComponent.NAME === 'InputComponent' && /^Set Action Binding$/i.test(itemName)) {
-            const setActionBinding = (nextValue: any) => {
-                const mapName = String(nextValue?.mapName || currentActionMapName || '').trim();
-                const actionName = String(nextValue?.actionName || '').trim();
-                const path = String(nextValue?.path || '').trim();
-
-                if (!mapName || !actionName || !path) {
-                    return;
-                }
-
-                item.setValue?.({ mapName, actionName, path });
-
-                const manager = gameComponent?.Manager;
-                manager?.emitter?.emit?.('updatedGameObject', gameComponent?.Parent);
-                manager?.emitter?.emit?.('component.updated', {
-                    component: gameComponent?.NAME,
-                    property: 'actionBinding',
-                    value: { mapName, actionName, path },
-                });
-            };
-
-            return {
-                ...item,
-                value: item.value || {
-                    mapName: currentActionMapName,
-                    actionName: currentActionNames[0] || '',
-                    path: '<Keyboard>/space',
-                },
-                actionMapOptions: actionMapNames,
-                actionMapOptionLabels: actionMapNames,
-                actionOptions: currentActionNames,
-                actionOptionLabels: currentActionNames,
-                setValue: setActionBinding,
-            };
-        }
-
-        if (gameComponent.NAME === 'InputComponent' && /^Set Action Callback By Name$/i.test(itemName)) {
-            const setActionCallbackByName = (nextValue: any) => {
-                const mapName = String(nextValue?.mapName || currentActionMapName || '').trim();
-                const actionName = String(nextValue?.actionName || '').trim();
-                const phase = String(nextValue?.phase || 'performed').trim();
-                const callbackName = String(nextValue?.callbackName || callbackNameOptions[0] || '').trim();
-
-                if (!mapName || !actionName || !phase || !callbackName) {
-                    return;
-                }
-
+    const valuesList = rawList.map((item) =>
+        transformFactoryValue(item, {
+            gameComponent,
+            rawList,
+            currentActionMapName,
+            currentActionNames,
+            actionMapNames,
+            callbackNameOptions,
+            lightTypeOptions,
+            cameraFollowModeOptions,
+            registerActionCallbackName: (callbackName: string) => {
                 setRegisteredActionCallbackNames((prev) =>
                     prev.includes(callbackName) ? prev : [...prev, callbackName]
                 );
-                item.setValue?.({ mapName, actionName, phase, callbackName });
-
-                const manager = gameComponent?.Manager;
-                manager?.emitter?.emit?.('updatedGameObject', gameComponent?.Parent);
-                manager?.emitter?.emit?.('component.updated', {
-                    component: gameComponent?.NAME,
-                    property: 'actionCallbackByName',
-                    value: { mapName, actionName, phase, callbackName },
-                });
-            };
-
-            return {
-                ...item,
-                value: item.value || {
-                    mapName: currentActionMapName,
-                    actionName: currentActionNames[0] || '',
-                    phase: ACTION_PHASE_OPTIONS[1],
-                    callbackName: callbackNameOptions[0] || '',
-                },
-                actionMapOptions: actionMapNames,
-                actionMapOptionLabels: actionMapNames,
-                actionOptions: currentActionNames,
-                actionOptionLabels: currentActionNames,
-                phaseOptions: [...ACTION_PHASE_OPTIONS],
-                phaseOptionLabels: [...ACTION_PHASE_OPTIONS],
-                callbackOptions: callbackNameOptions,
-                callbackOptionLabels: callbackNameOptions,
-                setValue: setActionCallbackByName,
-            };
-        }
-
-        if (gameComponent.NAME === 'InputComponent' && /^Dispatch Registered Event$/i.test(itemName)) {
-            const dispatchRegisteredEvent = (nextValue: any) => {
-                const callbackName = String(nextValue?.callbackName || callbackNameOptions[0] || '').trim();
-                if (!callbackName) {
-                    return;
-                }
-
-                item.setValue?.({ callbackName });
-
-                const manager = gameComponent?.Manager;
-                manager?.emitter?.emit?.('updatedGameObject', gameComponent?.Parent);
-                manager?.emitter?.emit?.('component.updated', {
-                    component: gameComponent?.NAME,
-                    property: 'dispatchRegisteredEvent',
-                    value: { callbackName },
-                });
-            };
-
-            return {
-                ...item,
-                value: item.value || { callbackName: callbackNameOptions[0] || '' },
-                callbackOptions: callbackNameOptions,
-                callbackOptionLabels: callbackNameOptions,
-                setValue: dispatchRegisteredEvent,
-            };
-        }
-
-        if (gameComponent.NAME === 'InputComponent' && /^Set Action Callback By Component$/i.test(itemName)) {
-            const componentNames = Object.values(GameComponentNameEnum).filter(
-                (name) => name !== GameComponentNameEnum.InputComponent
-            );
-
-            const setActionCallbackByComponent = (nextValue: any) => {
-                const mapName = String(nextValue?.mapName || currentActionMapName || '').trim();
-                const actionName = String(nextValue?.actionName || '').trim();
-                const phase = String(nextValue?.phase || 'performed').trim();
-                const componentName = String(nextValue?.componentName || '').trim();
-                const methodName = String(nextValue?.methodName || '').trim();
-
-                if (!mapName || !actionName || !phase || !componentName || !methodName) {
-                    return;
-                }
-
-                item.setValue?.({ mapName, actionName, phase, componentName, methodName });
-
-                const manager = gameComponent?.Manager;
-                manager?.emitter?.emit?.('updatedGameObject', gameComponent?.Parent);
-                manager?.emitter?.emit?.('component.updated', {
-                    component: gameComponent?.NAME,
-                    property: 'actionCallbackByComponent',
-                    value: { mapName, actionName, phase, componentName, methodName },
-                });
-            };
-
-            return {
-                ...item,
-                value: item.value || {
-                    mapName: currentActionMapName,
-                    actionName: currentActionNames[0] || '',
-                    phase: ACTION_PHASE_OPTIONS[1],
-                    componentName: componentNames[0] || '',
-                    methodName: '',
-                },
-                actionMapOptions: actionMapNames,
-                actionMapOptionLabels: actionMapNames,
-                actionOptions: currentActionNames,
-                actionOptionLabels: currentActionNames,
-                phaseOptions: [...ACTION_PHASE_OPTIONS],
-                phaseOptionLabels: [...ACTION_PHASE_OPTIONS],
-                componentOptions: componentNames,
-                componentOptionLabels: componentNames,
-                setValue: setActionCallbackByComponent,
-            };
-        }
-
-        const isColliderBoundField =
-            /^Size [XYZ]$/i.test(itemName) || /^Radius$/i.test(itemName) || /^Offset [XYZ]$/i.test(itemName);
-        if (gameComponent.NAME === 'ColliderComponent' && isColliderBoundField) {
-            const autoSizeItem = rawList.find((v) => v.name === 'Auto Size');
-            return {
-                ...item,
-                setValue: (value: any) => {
-                    if (/^Size [XYZ]$/i.test(itemName) || /^Radius$/i.test(itemName)) {
-                        autoSizeItem?.setValue?.(false);
-                    }
-                    item.setValue?.(value);
-                    const manager = gameComponent?.Manager;
-                    manager?.emitter?.emit?.('transformControl-change');
-                    manager?.emitter?.emit?.('updatedGameObject', gameComponent?.Parent);
-                },
-            };
-        }
-
-        if (isRotationAxisItem(itemName)) {
-            return {
-                ...item,
-                value: typeof item.value === 'number' ? item.value * RAD_TO_DEG : item.value,
-                setValue:
-                    typeof item.setValue === 'function' ? (deg: number) => item.setValue!(deg * DEG_TO_RAD) : undefined,
-            };
-        }
-
-        return item;
-    });
+            },
+            getOriginalPathForBlob,
+            isRotationAxisItem,
+            radToDeg: RAD_TO_DEG,
+            degToRad: DEG_TO_RAD,
+        })
+    );
 
     const setActionBindingItem = useMemo(
         () => valuesList.find((item) => /^Set Action Binding$/i.test(String(item?.name || ''))),
@@ -593,7 +261,22 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
                 .map((name) => String(name || '').trim())
                 .filter(Boolean)
                 .filter((name) => !name.startsWith('_'))
-                .filter((name) => !COMPONENT_METHOD_BLACKLIST.has(name.toLowerCase()))
+                .filter(
+                    (name) =>
+                        ![
+                            'constructor',
+                            'dispose',
+                            'destroy',
+                            'update',
+                            'init',
+                            'initialize',
+                            'start',
+                            'awake',
+                            'onenable',
+                            'ondisable',
+                            'ondestroy',
+                        ].includes(name.toLowerCase())
+                )
                 .sort((a, b) => a.localeCompare(b));
 
             if (cleanMethods.length) {
@@ -666,7 +349,8 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
                                     <div className="inspector-player-input__title">PlayerInput (Unity-style)</div>
                                     <div className="inspector-player-input__description">
                                         Configure actions and bindings using paths like &lt;Keyboard&gt;/space,
-                                        &lt;Mouse&gt;/leftButton, &lt;Gamepad&gt;/buttonSouth, &lt;Gamepad&gt;/leftStick/x.
+                                        &lt;Mouse&gt;/leftButton, &lt;Gamepad&gt;/buttonSouth,
+                                        &lt;Gamepad&gt;/leftStick/x.
                                     </div>
                                 </div>
                                 <button
@@ -691,7 +375,9 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
                                 </div>
 
                                 {inputEventLogs.length === 0 ? (
-                                    <div className="inspector-input-event-log__empty">No dispatched input events yet.</div>
+                                    <div className="inspector-input-event-log__empty">
+                                        No dispatched input events yet.
+                                    </div>
                                 ) : (
                                     <div className="inspector-input-event-log__list">
                                         {inputEventLogs.map((log) => (

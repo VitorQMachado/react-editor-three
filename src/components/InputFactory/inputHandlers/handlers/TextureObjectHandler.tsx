@@ -2,7 +2,15 @@ import React from 'react';
 import { IInputTypeHandler, InputHandlerContext } from '../types';
 
 export class TextureObjectHandler implements IInputTypeHandler {
-    render({ value, onChange, name, renderTextureFileButton, extractFileName, selectedTextureNamesByKey, setSelectedTextureNamesByKey }: InputHandlerContext) {
+    render({
+        value,
+        onChange,
+        name,
+        renderTextureFileButton,
+        extractFileName,
+        selectedTextureNamesByKey,
+        setSelectedTextureNamesByKey,
+    }: InputHandlerContext) {
         return (
             <div className="inspector-texture-map-inputs">
                 {Object.keys(value).map((key) => (

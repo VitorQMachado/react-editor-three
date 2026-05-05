@@ -2,7 +2,15 @@ import React from 'react';
 import { IInputTypeHandler, InputHandlerContext } from '../types';
 
 export class InputTextHandler implements IInputTypeHandler {
-    render({ value, onChange, name, commonInputProps, renderTextureFileButton, extractFileName, extractTextureReference }: InputHandlerContext): React.ReactElement | null {
+    render({
+        value,
+        onChange,
+        name,
+        commonInputProps,
+        renderTextureFileButton,
+        extractFileName,
+        extractTextureReference,
+    }: InputHandlerContext): React.ReactElement | null {
         const isTextureField = /\b(texture|textures|map|maps)\b/i.test(name || '');
 
         if (isTextureField) {
