@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { GameComponent } from '@vmlibs/unit_three';
 import { GroupedFactoryFields } from '../InputFactory/GroupedFactoryFields';
-import { InputActionsModal } from '../InputFactory/InputActionsModal';
+import { InputActionsModal } from '../Modals/InputActionsModal';
 import './styles.css';
 
 export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { gameComponent: GameComponent }) => {

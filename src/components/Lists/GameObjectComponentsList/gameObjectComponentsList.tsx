@@ -1,61 +1,20 @@
 import {
     EventStream,
     GameComponent,
-    GameComponentName,
-    GameComponentNameEnum,
     GameManager,
     GameObject,
-    IGameCameraComponent,
     IGameObjectUpdatedPayload,
 } from '@vmlibs/unit_three';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GameObjectComponent } from '../../GameObjectComponent/GameObjectComponent';
-
-type ComponentName = GameComponentName | '';
-
-const ALL_COMPONENTS: { name: GameComponentName; label: string; description: string }[] = [
-    { name: GameComponentNameEnum.MeshComponent, label: 'Mesh', description: 'Renders a 3D mesh in the scene' },
-    { name: GameComponentNameEnum.LightComponent, label: 'Light', description: 'Adds a light source to the scene' },
-    {
-        name: GameComponentNameEnum.InputComponent,
-        label: 'Input',
-        description: 'Maps keyboard and mouse events to gameplay callbacks',
-    },
-    { name: GameComponentNameEnum.SkyboxComponent, label: 'Skybox', description: 'Applies a skybox environment' },
-    { name: GameComponentNameEnum.GrassComponent, label: 'Grass', description: 'Renders procedural grass geometry' },
-    {
-        name: GameComponentNameEnum.RigidBodyComponent,
-        label: 'RigidBody',
-        description: 'Adds physics body properties like velocity and gravity',
-    },
-    {
-        name: GameComponentNameEnum.ColliderComponent,
-        label: 'Collider',
-        description: 'Adds collision shape for physics interaction',
-    },
-    {
-        name: GameComponentNameEnum.CameraComponent,
-        label: 'Game Camera',
-        description: 'Controls runtime scene view and play mode camera behavior',
-    },
-];
-
-type ComponentEventLog = {
-    id: string;
-    category: 'collision' | 'component';
-    label: string;
-    detail: string;
-    time: string;
-};
+import { AddComponentModal } from '../../Modals/AddComponentModal';
+import { ComponentEventLogSection } from './ComponentEventLogSection';
 
 export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameManager }) => {
     const [selectedGameObject, setSelectedGameObject] = useState<GameObject | undefined>();
     const [components, setComponents] = useState<GameComponent[]>([]);
     const [nameValue, setNameValue] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
-    const [search, setSearch] = useState('');
-    const [eventLogs, setEventLogs] = useState<ComponentEventLog[]>([]);
-    const searchRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (!gameManager) {
@@ -76,105 +35,11 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
         return () => sub.unsubscribe();
     }, [gameManager]);
 
-    useEffect(() => {
-        const pushEvent = (entry: Omit<ComponentEventLog, 'id' | 'time'>) => {
-            setEventLogs((prev) =>
-                [
-                    {
-                        ...entry,
-                        id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-                        time: new Date().toLocaleTimeString(),
-                    },
-                    ...prev,
-                ].slice(0, 50)
-            );
-        };
-
-        const collisionSub = EventStream.streamTo('collision').subscribe((payload: any) => {
-            const event = payload?.event || 'collision';
-            const selfName = payload?.self?.Name || 'Unknown';
-            const otherName = payload?.gameObject?.Name || payload?.other?.Parent?.Name || 'Unknown';
-            pushEvent({ category: 'collision', label: `${selfName} → ${otherName}`, detail: event });
-        });
-
-        const componentSub = EventStream.streamTo('component.updated').subscribe((payload: any) => {
-            const component = payload?.component || 'Unknown';
-            const property = payload?.property || '';
-            const raw = payload?.value;
-            const detail =
-                raw === null || raw === undefined
-                    ? 'null'
-                    : typeof raw === 'object'
-                      ? JSON.stringify(raw)
-                      : String(raw);
-            pushEvent({
-                category: 'component',
-                label: `${component}`,
-                detail: property ? `${property}: ${detail}` : detail,
-            });
-        });
-
-        return () => {
-            collisionSub.unsubscribe();
-            componentSub.unsubscribe();
-        };
-    }, []);
-
     const openModal = () => {
-        setSearch('');
         setModalOpen(true);
-        setTimeout(() => searchRef.current?.focus(), 50);
     };
 
     const closeModal = () => setModalOpen(false);
-
-    const handleAddComponent = (componentName: ComponentName) => {
-        if (!selectedGameObject) return;
-        const defaultOptionsByComponent: Partial<
-            Record<ComponentName, Partial<IGameCameraComponent> | Record<string, unknown>>
-        > = {
-            SkyboxComponent: {
-                texture: '',
-                size: 150,
-                position: { x: 0, y: 0, z: 0 },
-            },
-            CameraComponent: {
-                isAlive: false,
-                isPreview: true,
-                followMode: 'lookAt',
-                lookAtTarget: '',
-                options: {
-                    cameraTargetDistance: 10,
-                    position: { x: 0, y: 0, z: 10 },
-                },
-            } as Partial<IGameCameraComponent>,
-        };
-
-        const componentData = defaultOptionsByComponent[componentName] || {};
-
-        gameManager.AddGameComponent(componentName, componentData, selectedGameObject);
-
-        if (componentName === 'CameraComponent') {
-            const targetCamera = selectedGameObject.GetComponent('CameraComponent');
-            const allCameras = gameManager.CameraComponents || [];
-            allCameras.forEach((cameraComp) => {
-                if (cameraComp === targetCamera) {
-                    cameraComp?.setPreview?.(true);
-                } else {
-                    cameraComp?.setPreview?.(false);
-                }
-            });
-        }
-
-        setComponents((selectedGameObject.GetComponents?.() || []) as unknown as GameComponent[]);
-        closeModal();
-    };
-
-    const filteredComponents = ALL_COMPONENTS.filter(
-        (c) =>
-            c.label.toLowerCase().includes(search.toLowerCase()) ||
-            c.description.toLowerCase().includes(search.toLowerCase())
-    );
 
     const applyNameChange = () => {
         const currentName = selectedGameObject?.Name;
@@ -243,87 +108,14 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
                     ))}
                 </div>
 
-                <div className="inspector-event-log">
-                    <div className="inspector-event-log__header">
-                        <span>Component Events</span>
-                        <button type="button" className="inspector-event-log__clear" onClick={() => setEventLogs([])}>
-                            Clear
-                        </button>
-                    </div>
-
-                    {eventLogs.length === 0 ? (
-                        <div className="inspector-event-log__empty">No events yet.</div>
-                    ) : (
-                        <div className="inspector-event-log__list">
-                            {eventLogs.map((log) => (
-                                <div key={log.id} className="inspector-event-log__item">
-                                    <span
-                                        className={`inspector-event-log__badge inspector-event-log__badge--${log.category}`}
-                                    >
-                                        {log.category}
-                                    </span>
-                                    <div className="inspector-event-log__label">{log.label}</div>
-                                    <div className="inspector-event-log__detail">{log.detail}</div>
-                                    <div className="inspector-event-log__time">{log.time}</div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                <ComponentEventLogSection />
             </div>
 
-            {modalOpen && (
-                <div className="add-component-overlay" onClick={closeModal}>
-                    <div
-                        className="add-component-modal"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label="Add Component"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="add-component-modal__header">
-                            <span className="add-component-modal__title">Add Component</span>
-                            <button
-                                type="button"
-                                className="add-component-modal__close"
-                                onClick={closeModal}
-                                aria-label="Close"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div className="add-component-modal__search-wrap">
-                            <input
-                                ref={searchRef}
-                                className="add-component-modal__search"
-                                type="text"
-                                placeholder="Search components…"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-
-                        <ul className="add-component-modal__list">
-                            {filteredComponents.length === 0 && (
-                                <li className="add-component-modal__empty">No components found.</li>
-                            )}
-                            {filteredComponents.map((c) => (
-                                <li key={c.name}>
-                                    <button
-                                        type="button"
-                                        className="add-component-modal__item"
-                                        onClick={() => handleAddComponent(c.name)}
-                                    >
-                                        <span className="add-component-modal__item-label">{c.label}</span>
-                                        <span className="add-component-modal__item-desc">{c.description}</span>
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-            )}
+            <AddComponentModal
+                isOpen={modalOpen}
+                onClose={closeModal}
+                gameManager={gameManager}
+            />
         </>
     );
 };
