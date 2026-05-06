@@ -1,33 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
-import { getOriginalPathForBlob } from '../../services';
-import { GameComponent, IFactoryValue } from '@vmlibs/unit_three';
+import { useEffect, useState } from 'react';
+import { GameComponent } from '@vmlibs/unit_three';
 import { GroupedFactoryFields } from '../InputFactory/GroupedFactoryFields';
 import { InputActionsModal } from '../InputFactory/InputActionsModal';
-import {
-    CAMERA_FOLLOW_MODE_OPTIONS,
-    DEFAULT_INPUT_ACTIONS,
-    DEG_TO_RAD,
-    LIGHT_TYPE_OPTIONS,
-    RAD_TO_DEG,
-} from './constants';
-import { buildGroupedFactoryRows, isRotationAxisItem } from './helpers';
-import { shouldIncludeFactoryItem, transformFactoryValue } from './FactoryStrategies/factoryValueStrategies';
 import './styles.css';
 
 export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { gameComponent: GameComponent }) => {
     const gameComponent = gameComponentProp as any;
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [registeredActionCallbackNames, setRegisteredActionCallbackNames] = useState<string[]>([]);
     const [isInputModalOpen, setIsInputModalOpen] = useState(false);
     const [inputEventLogs, setInputEventLogs] = useState<
         Array<{ id: string; label: string; detail: string; time: string }>
     >([]);
-    const [actionMapsState, setActionMapsState] = useState<any[]>(() => {
-        if (!Array.isArray(gameComponent?.ActionMaps)) {
-            return [];
-        }
-        return gameComponent.ActionMaps;
-    });
     const isInputComponent = gameComponent?.NAME === 'InputComponent';
 
     const pushInputEventLog = (label: string, detail: string) => {
@@ -43,14 +26,6 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
             ].slice(0, 30)
         );
     };
-
-    useEffect(() => {
-        if (!Array.isArray(gameComponent?.ActionMaps)) {
-            setActionMapsState([]);
-            return;
-        }
-        setActionMapsState(gameComponent.ActionMaps);
-    }, [gameComponent]);
 
     useEffect(() => {
         if (!isInputComponent) {
@@ -89,143 +64,6 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
             emitter.off?.('component.updated', onComponentUpdated);
         };
     }, [gameComponent, isInputComponent]);
-
-    const actionMaps = useMemo(() => {
-        if (!Array.isArray(actionMapsState)) {
-            return [] as any[];
-        }
-        return actionMapsState;
-    }, [actionMapsState]);
-    const actionMapNames = useMemo(
-        () => actionMaps.map((map) => String(map?.name || '')).filter(Boolean),
-        [actionMaps]
-    );
-    const currentActionMapName =
-        String(gameComponent?.CurrentActionMap || actionMapNames[0] || 'Gameplay').trim() || 'Gameplay';
-    const currentActionMap = useMemo(
-        () => actionMaps.find((map) => String(map?.name || '') === currentActionMapName),
-        [actionMaps, currentActionMapName]
-    );
-
-    const persistActionMaps = (nextActionMaps: any[]) => {
-        setActionMapsState(nextActionMaps);
-
-        const manager = gameComponent?.Manager;
-        manager?.emitter?.emit?.('updatedGameObject', gameComponent?.Parent);
-        manager?.emitter?.emit?.('component.updated', {
-            component: gameComponent?.NAME,
-            property: 'actionMaps',
-            value: nextActionMaps,
-        });
-    };
-
-    const currentActionNames = useMemo(() => {
-        if (!currentActionMap || !Array.isArray(currentActionMap.actions)) {
-            return [...DEFAULT_INPUT_ACTIONS];
-        }
-
-        const names = currentActionMap.actions.map((action: any) => String(action?.name || '')).filter(Boolean);
-        return names.length ? names : [...DEFAULT_INPUT_ACTIONS];
-    }, [currentActionMap]);
-
-    const callbackNameOptions = useMemo(() => registeredActionCallbackNames, [registeredActionCallbackNames]);
-    const factory = gameComponent?.Factory;
-    const rawList: IFactoryValue[] = (factory?.valuesList || []).filter((item: IFactoryValue) => {
-        const itemName = item.name || '';
-        return shouldIncludeFactoryItem(gameComponent.NAME, itemName);
-    });
-    const lightTypeOptions = [...LIGHT_TYPE_OPTIONS];
-    const cameraFollowModeOptions = [...CAMERA_FOLLOW_MODE_OPTIONS];
-
-    const valuesList = rawList.map((item) =>
-        transformFactoryValue(item, {
-            gameComponent,
-            rawList,
-            currentActionMapName,
-            currentActionNames,
-            actionMapNames,
-            callbackNameOptions,
-            lightTypeOptions,
-            cameraFollowModeOptions,
-            registerActionCallbackName: (callbackName: string) => {
-                setRegisteredActionCallbackNames((prev) =>
-                    prev.includes(callbackName) ? prev : [...prev, callbackName]
-                );
-            },
-            getOriginalPathForBlob,
-            isRotationAxisItem,
-            radToDeg: RAD_TO_DEG,
-            degToRad: DEG_TO_RAD,
-        })
-    );
-
-    const setActionBindingItem = useMemo(
-        () => valuesList.find((item) => /^Set Action Binding$/i.test(String(item?.name || ''))),
-        [valuesList]
-    );
-    const setActionCallbackByComponentItem = useMemo(
-        () => valuesList.find((item) => /^Set Action Callback By Component$/i.test(String(item?.name || ''))),
-        [valuesList]
-    );
-
-    const componentMethodOptions = useMemo(() => {
-        const components = Array.isArray(gameComponent?.Parent?.Components) ? gameComponent.Parent.Components : [];
-        const byComponent = new Map<string, string[]>();
-
-        components.forEach((component: any) => {
-            const componentName = String(component?.NAME || '').trim();
-            if (!componentName || componentName === 'InputComponent') {
-                return;
-            }
-
-            const methods = new Set<string>();
-            Object.keys(component || {}).forEach((key) => {
-                if (typeof component?.[key] === 'function') {
-                    methods.add(key);
-                }
-            });
-
-            let proto = Object.getPrototypeOf(component);
-            while (proto && proto !== Object.prototype) {
-                Object.getOwnPropertyNames(proto).forEach((name) => {
-                    if (typeof component?.[name] === 'function') {
-                        methods.add(name);
-                    }
-                });
-                proto = Object.getPrototypeOf(proto);
-            }
-
-            const cleanMethods = Array.from(methods)
-                .map((name) => String(name || '').trim())
-                .filter(Boolean)
-                .filter((name) => !name.startsWith('_'))
-                .filter(
-                    (name) =>
-                        ![
-                            'constructor',
-                            'dispose',
-                            'destroy',
-                            'update',
-                            'init',
-                            'initialize',
-                            'start',
-                            'awake',
-                            'onenable',
-                            'ondisable',
-                            'ondestroy',
-                        ].includes(name.toLowerCase())
-                )
-                .sort((a, b) => a.localeCompare(b));
-
-            if (cleanMethods.length) {
-                byComponent.set(componentName, cleanMethods);
-            }
-        });
-
-        return byComponent;
-    }, [gameComponent]);
-
-    const groupedRows = useMemo(() => buildGroupedFactoryRows(valuesList), [valuesList]);
 
     return (
         <div key={`game-object-component-${gameComponent.NAME}`} className="inspector-component">
@@ -292,7 +130,7 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
                         </>
                     )}
                     <div className="inspector-component__fields">
-                        {!isInputComponent && <GroupedFactoryFields rows={groupedRows} />}
+                        {!isInputComponent && <GroupedFactoryFields gameComponent={gameComponent} />}
                     </div>
                 </>
             )}
@@ -300,14 +138,7 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
             <InputActionsModal
                 isOpen={isInputComponent && isInputModalOpen}
                 onClose={() => setIsInputModalOpen(false)}
-                actionMaps={actionMaps}
-                currentActionNames={currentActionNames}
-                currentActionMapName={currentActionMapName}
-                currentActionMap={currentActionMap}
-                persistActionMaps={persistActionMaps}
-                setActionBindingItem={setActionBindingItem}
-                setActionCallbackByComponentItem={setActionCallbackByComponentItem}
-                componentMethodOptions={componentMethodOptions}
+                gameComponent={gameComponent}
             />
         </div>
     );

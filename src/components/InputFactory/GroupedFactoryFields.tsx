@@ -1,15 +1,86 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import ComponentInputFactory from './InputFactory';
-import type { GroupedFactoryRow } from '../GameObjectComponent/helpers';
+import { getOriginalPathForBlob } from '../../services';
+import {
+    buildGroupedFactoryRows,
+    isRotationAxisItem,
+    type GroupedFactoryRow,
+} from '../GameObjectComponent/helpers';
+import {
+    CAMERA_FOLLOW_MODE_OPTIONS,
+    DEG_TO_RAD,
+    LIGHT_TYPE_OPTIONS,
+    RAD_TO_DEG,
+} from '../GameObjectComponent/constants';
+import {
+    shouldIncludeFactoryItem,
+    transformFactoryValue,
+} from '../GameObjectComponent/FactoryStrategies/factoryValueStrategies';
+import { useInputActionMaps } from '../../hooks/useInputActionMaps';
 
 type GroupedFactoryFieldsProps = {
-    rows: GroupedFactoryRow[];
+    gameComponent: any;
 };
 
-export const GroupedFactoryFields = ({ rows }: GroupedFactoryFieldsProps): React.ReactElement => {
+export const GroupedFactoryFields = ({ gameComponent }: GroupedFactoryFieldsProps): React.ReactElement => {
+    const [registeredActionCallbackNames, setRegisteredActionCallbackNames] = useState<string[]>([]);
+    const { actionMapNames, currentActionMapName, currentActionNames } = useInputActionMaps(gameComponent);
+
+    const callbackNameOptions = useMemo(() => registeredActionCallbackNames, [registeredActionCallbackNames]);
+
+    const factory = gameComponent?.Factory;
+    const rawList = useMemo(
+        () =>
+            (factory?.valuesList || []).filter((item: any) => {
+                const itemName = item.name || '';
+                return shouldIncludeFactoryItem(gameComponent.NAME, itemName);
+            }),
+        [factory?.valuesList, gameComponent.NAME]
+    );
+
+    const lightTypeOptions = [...LIGHT_TYPE_OPTIONS];
+    const cameraFollowModeOptions = [...CAMERA_FOLLOW_MODE_OPTIONS];
+
+    const valuesList = useMemo(
+        () =>
+            rawList.map((item) =>
+                transformFactoryValue(item, {
+                    gameComponent,
+                    rawList,
+                    currentActionMapName,
+                    currentActionNames,
+                    actionMapNames,
+                    callbackNameOptions,
+                    lightTypeOptions,
+                    cameraFollowModeOptions,
+                    registerActionCallbackName: (callbackName: string) => {
+                        setRegisteredActionCallbackNames((prev) =>
+                            prev.includes(callbackName) ? prev : [...prev, callbackName]
+                        );
+                    },
+                    getOriginalPathForBlob,
+                    isRotationAxisItem,
+                    radToDeg: RAD_TO_DEG,
+                    degToRad: DEG_TO_RAD,
+                })
+            ),
+        [
+            actionMapNames,
+            callbackNameOptions,
+            cameraFollowModeOptions,
+            currentActionMapName,
+            currentActionNames,
+            gameComponent,
+            lightTypeOptions,
+            rawList,
+        ]
+    );
+
+    const groupedRows: GroupedFactoryRow[] = useMemo(() => buildGroupedFactoryRows(valuesList), [valuesList]);
+
     return (
         <>
-            {rows.map((row) => {
+            {groupedRows.map((row) => {
                 if (row.type === 'single') {
                     return (
                         <div key={row.item.name} className="inspector-component__field">

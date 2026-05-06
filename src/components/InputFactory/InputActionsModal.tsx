@@ -1,32 +1,26 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { GameComponent } from '@vmlibs/unit_three';
 import { ACTION_PHASE_OPTIONS, DEFAULT_INPUT_ACTIONS, MOUSE_BINDING_OPTIONS } from '../GameObjectComponent/constants';
 import { extractBindingPathFromAction } from '../GameObjectComponent/helpers';
+import { useInputActionMaps } from '../../hooks/useInputActionMaps';
+import { useInputActionHandlers } from '../../hooks/useInputActionHandlers';
+import { useComponentMethodOptions } from '../../hooks/useComponentMethodOptions';
 
 type InputActionsModalProps = {
     isOpen: boolean;
     onClose: () => void;
-    actionMaps: any[];
-    currentActionNames: string[];
-    currentActionMapName: string;
-    currentActionMap: any;
-    persistActionMaps: (nextActionMaps: any[]) => void;
-    setActionBindingItem?: any;
-    setActionCallbackByComponentItem?: any;
-    componentMethodOptions: Map<string, string[]>;
+    gameComponent: GameComponent | null;
 };
 
 export const InputActionsModal = ({
     isOpen,
     onClose,
-    actionMaps,
-    currentActionNames,
-    currentActionMapName,
-    currentActionMap,
-    persistActionMaps,
-    setActionBindingItem,
-    setActionCallbackByComponentItem,
-    componentMethodOptions,
+    gameComponent,
 }: InputActionsModalProps): React.ReactElement | null => {
+    const { setActionBindingItem, setActionCallbackByComponentItem, persistActionMaps } =
+        useInputActionHandlers(gameComponent as any);
+    const { actionMaps, currentActionMapName, currentActionMap, currentActionNames } = useInputActionMaps(gameComponent);
+    const componentMethodOptions = useComponentMethodOptions(gameComponent as any);
     const [selectedActionName, setSelectedActionName] = useState<string>(DEFAULT_INPUT_ACTIONS[0]);
     const [bindingPathInput, setBindingPathInput] = useState<string>('<Keyboard>/space');
     const [actionBindingDraftByName, setActionBindingDraftByName] = useState<Record<string, string>>({});
