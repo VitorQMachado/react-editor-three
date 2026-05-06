@@ -9,7 +9,7 @@ import {
     IGameObjectUpdatedPayload,
 } from '@vmlibs/unit_three';
 import { useEffect, useRef, useState } from 'react';
-import { GameObjectComponent } from '../../GameObjectComponents/GameObjectComponent/GameObjectComponent';
+import { GameObjectComponent } from '../../GameObjectComponent/GameObjectComponent';
 
 type ComponentName = GameComponentName | '';
 

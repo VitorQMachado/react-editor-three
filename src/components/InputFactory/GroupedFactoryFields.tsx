@@ -1,6 +1,6 @@
 import React from 'react';
-import ComponentInputFactory from '../../InputFactory/InputFactory';
-import type { GroupedFactoryRow } from './helpers';
+import ComponentInputFactory from './InputFactory';
+import type { GroupedFactoryRow } from '../GameObjectComponent/helpers';
 
 type GroupedFactoryFieldsProps = {
     rows: GroupedFactoryRow[];

@@ -1,32 +1,31 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ACTION_PHASE_OPTIONS, DEFAULT_INPUT_ACTIONS, MOUSE_BINDING_OPTIONS } from './constants';
-import { extractBindingPathFromAction } from './helpers';
+import { ACTION_PHASE_OPTIONS, DEFAULT_INPUT_ACTIONS, MOUSE_BINDING_OPTIONS } from '../GameObjectComponent/constants';
+import { extractBindingPathFromAction } from '../GameObjectComponent/helpers';
 
 type InputActionsModalProps = {
     isOpen: boolean;
     onClose: () => void;
+    actionMaps: any[];
     currentActionNames: string[];
+    currentActionMapName: string;
     currentActionMap: any;
+    persistActionMaps: (nextActionMaps: any[]) => void;
+    setActionBindingItem?: any;
+    setActionCallbackByComponentItem?: any;
     componentMethodOptions: Map<string, string[]>;
-    onAddInputAction: () => void;
-    onApplyActionBinding: (actionName: string, path: string) => void;
-    onAddComponentFunctionCallback: (payload: {
-        actionName: string;
-        phase: string;
-        componentName: string;
-        methodName: string;
-    }) => void;
 };
 
 export const InputActionsModal = ({
     isOpen,
     onClose,
+    actionMaps,
     currentActionNames,
+    currentActionMapName,
     currentActionMap,
+    persistActionMaps,
+    setActionBindingItem,
+    setActionCallbackByComponentItem,
     componentMethodOptions,
-    onAddInputAction,
-    onApplyActionBinding,
-    onAddComponentFunctionCallback,
 }: InputActionsModalProps): React.ReactElement | null => {
     const [selectedActionName, setSelectedActionName] = useState<string>(DEFAULT_INPUT_ACTIONS[0]);
     const [bindingPathInput, setBindingPathInput] = useState<string>('<Keyboard>/space');
@@ -104,10 +103,72 @@ export const InputActionsModal = ({
         setBindingPathInput(selectedActionBindingPath);
     }, [selectedActionBindingPath]);
 
+    const updateCurrentActionMapActions = (nextActionNames: string[]) => {
+        const sanitizedActionNames = nextActionNames.map((name) => String(name || '').trim()).filter(Boolean);
+        const uniqueActionNames = Array.from(new Set(sanitizedActionNames));
+        if (!uniqueActionNames.length) {
+            return;
+        }
+
+        const existingEntriesByName = new Map<string, any>();
+        const existingActions = Array.isArray(currentActionMap?.actions) ? currentActionMap.actions : [];
+        existingActions.forEach((action: any) => {
+            const actionName = String(action?.name || '').trim();
+            if (actionName) {
+                existingEntriesByName.set(actionName, action);
+            }
+        });
+
+        const nextActions = uniqueActionNames.map((actionName) => {
+            const existing = existingEntriesByName.get(actionName);
+            if (existing && typeof existing === 'object') {
+                return { ...existing, name: actionName };
+            }
+            return { name: actionName };
+        });
+
+        const sourceMaps = actionMaps.length ? actionMaps : [{ name: currentActionMapName, actions: [] }];
+        let hasCurrentMap = false;
+        const nextMaps = sourceMaps.map((map) => {
+            if (String(map?.name || '') !== currentActionMapName) {
+                return map;
+            }
+
+            hasCurrentMap = true;
+            return { ...map, actions: nextActions };
+        });
+
+        if (!hasCurrentMap) {
+            nextMaps.push({ name: currentActionMapName, actions: nextActions });
+        }
+
+        persistActionMaps(nextMaps);
+    };
+
+    const handleAddInputAction = () => {
+        const existingActionNames = new Set(
+            currentActionNames.map((name) =>
+                String(name || '')
+                    .trim()
+                    .toLowerCase()
+            )
+        );
+        const baseName = 'new action';
+        let suffix = 1;
+        let nextActionName = `${baseName} ${suffix}`;
+
+        while (existingActionNames.has(nextActionName.toLowerCase())) {
+            suffix += 1;
+            nextActionName = `${baseName} ${suffix}`;
+        }
+
+        updateCurrentActionMapActions([...currentActionNames, nextActionName]);
+    };
+
     const applyActionBinding = (path: string) => {
         const normalizedPath = String(path || '').trim();
         const actionName = String(selectedActionName || '').trim();
-        if (!normalizedPath || !actionName) {
+        if (!normalizedPath || !actionName || !setActionBindingItem?.setValue) {
             return;
         }
 
@@ -116,7 +177,13 @@ export const InputActionsModal = ({
             [actionName]: normalizedPath,
         }));
         setBindingPathInput(normalizedPath);
-        onApplyActionBinding(actionName, normalizedPath);
+
+        updateCurrentActionMapActions([...currentActionNames, actionName]);
+        setActionBindingItem.setValue?.({
+            mapName: currentActionMapName,
+            actionName,
+            path: normalizedPath,
+        });
     };
 
     const handleListenForBindingKey = () => {
@@ -145,15 +212,18 @@ export const InputActionsModal = ({
 
     const handleAddComponentFunctionCallback = () => {
         const actionName = String(selectedActionName || '').trim();
+        const phase = String(selectedCallbackPhase || '').trim();
         const componentName = String(selectedCallbackComponent || '').trim();
         const methodName = String(selectedCallbackMethod || '').trim();
-        if (!actionName || !componentName || !methodName) {
+        if (!actionName || !phase || !componentName || !methodName || !setActionCallbackByComponentItem?.setValue) {
             return;
         }
 
-        onAddComponentFunctionCallback({
+        updateCurrentActionMapActions([...currentActionNames, actionName]);
+        setActionCallbackByComponentItem.setValue?.({
+            mapName: currentActionMapName,
             actionName,
-            phase: selectedCallbackPhase,
+            phase,
             componentName,
             methodName,
         });
@@ -197,7 +267,7 @@ export const InputActionsModal = ({
                             <button
                                 type="button"
                                 className="inspector-callback-registry__add inspector-input-actions-list__add"
-                                onClick={onAddInputAction}
+                                onClick={handleAddInputAction}
                             >
                                 Add Action
                             </button>

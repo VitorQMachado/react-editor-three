@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getOriginalPathForBlob } from '../../../services';
+import { getOriginalPathForBlob } from '../../services';
 import { GameComponent, IFactoryValue } from '@vmlibs/unit_three';
-import { GroupedFactoryFields } from './GroupedFactoryFields';
-import { InputActionsModal } from './InputActionsModal';
+import { GroupedFactoryFields } from '../InputFactory/GroupedFactoryFields';
+import { InputActionsModal } from '../InputFactory/InputActionsModal';
 import {
     CAMERA_FOLLOW_MODE_OPTIONS,
     DEFAULT_INPUT_ACTIONS,
@@ -11,7 +11,7 @@ import {
     RAD_TO_DEG,
 } from './constants';
 import { buildGroupedFactoryRows, isRotationAxisItem } from './helpers';
-import { shouldIncludeFactoryItem, transformFactoryValue } from './factoryValueStrategies';
+import { shouldIncludeFactoryItem, transformFactoryValue } from './FactoryStrategies/factoryValueStrategies';
 import './styles.css';
 
 export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { gameComponent: GameComponent }) => {
@@ -117,68 +117,6 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
             property: 'actionMaps',
             value: nextActionMaps,
         });
-    };
-
-    const updateCurrentActionMapActions = (nextActionNames: string[]) => {
-        const sanitizedActionNames = nextActionNames.map((name) => String(name || '').trim()).filter(Boolean);
-        const uniqueActionNames = Array.from(new Set(sanitizedActionNames));
-        if (!uniqueActionNames.length) {
-            return;
-        }
-
-        const existingEntriesByName = new Map<string, any>();
-        const existingActions = Array.isArray(currentActionMap?.actions) ? currentActionMap.actions : [];
-        existingActions.forEach((action: any) => {
-            const actionName = String(action?.name || '').trim();
-            if (actionName) {
-                existingEntriesByName.set(actionName, action);
-            }
-        });
-
-        const nextActions = uniqueActionNames.map((actionName) => {
-            const existing = existingEntriesByName.get(actionName);
-            if (existing && typeof existing === 'object') {
-                return { ...existing, name: actionName };
-            }
-            return { name: actionName };
-        });
-
-        const sourceMaps = actionMaps.length ? actionMaps : [{ name: currentActionMapName, actions: [] }];
-        let hasCurrentMap = false;
-        const nextMaps = sourceMaps.map((map) => {
-            if (String(map?.name || '') !== currentActionMapName) {
-                return map;
-            }
-
-            hasCurrentMap = true;
-            return { ...map, actions: nextActions };
-        });
-
-        if (!hasCurrentMap) {
-            nextMaps.push({ name: currentActionMapName, actions: nextActions });
-        }
-
-        persistActionMaps(nextMaps);
-    };
-
-    const handleAddInputAction = () => {
-        const existingActionNames = new Set(
-            currentActionNames.map((name) =>
-                String(name || '')
-                    .trim()
-                    .toLowerCase()
-            )
-        );
-        const baseName = 'new action';
-        let suffix = 1;
-        let nextActionName = `${baseName} ${suffix}`;
-
-        while (existingActionNames.has(nextActionName.toLowerCase())) {
-            suffix += 1;
-            nextActionName = `${baseName} ${suffix}`;
-        }
-
-        updateCurrentActionMapActions([...currentActionNames, nextActionName]);
     };
 
     const currentActionNames = useMemo(() => {
@@ -287,45 +225,6 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
         return byComponent;
     }, [gameComponent]);
 
-    const applyActionBinding = (actionName: string, path: string) => {
-        const normalizedPath = String(path || '').trim();
-        const normalizedActionName = String(actionName || '').trim();
-        if (!normalizedPath || !normalizedActionName || !setActionBindingItem?.setValue) {
-            return;
-        }
-
-        updateCurrentActionMapActions([...currentActionNames, normalizedActionName]);
-        (setActionBindingItem as any).setValue?.({
-            mapName: currentActionMapName,
-            actionName: normalizedActionName,
-            path: normalizedPath,
-        });
-    };
-
-    const handleAddComponentFunctionCallback = (payload: {
-        actionName: string;
-        phase: string;
-        componentName: string;
-        methodName: string;
-    }) => {
-        const actionName = String(payload?.actionName || '').trim();
-        const phase = String(payload?.phase || '').trim();
-        const componentName = String(payload?.componentName || '').trim();
-        const methodName = String(payload?.methodName || '').trim();
-        if (!actionName || !phase || !componentName || !methodName || !setActionCallbackByComponentItem?.setValue) {
-            return;
-        }
-
-        updateCurrentActionMapActions([...currentActionNames, actionName]);
-        (setActionCallbackByComponentItem as any).setValue?.({
-            mapName: currentActionMapName,
-            actionName,
-            phase,
-            componentName,
-            methodName,
-        });
-    };
-
     const groupedRows = useMemo(() => buildGroupedFactoryRows(valuesList), [valuesList]);
 
     return (
@@ -401,12 +300,14 @@ export const GameObjectComponent = ({ gameComponent: gameComponentProp }: { game
             <InputActionsModal
                 isOpen={isInputComponent && isInputModalOpen}
                 onClose={() => setIsInputModalOpen(false)}
+                actionMaps={actionMaps}
                 currentActionNames={currentActionNames}
+                currentActionMapName={currentActionMapName}
                 currentActionMap={currentActionMap}
+                persistActionMaps={persistActionMaps}
+                setActionBindingItem={setActionBindingItem}
+                setActionCallbackByComponentItem={setActionCallbackByComponentItem}
                 componentMethodOptions={componentMethodOptions}
-                onAddInputAction={handleAddInputAction}
-                onApplyActionBinding={applyActionBinding}
-                onAddComponentFunctionCallback={handleAddComponentFunctionCallback}
             />
         </div>
     );

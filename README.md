@@ -94,7 +94,7 @@ src/
 		GameScreen/
 		Sidebar/
 		Lists/
-		GameObjectComponents/
+		FactoryStrategies/
 	services/
 	utils/
 ```
