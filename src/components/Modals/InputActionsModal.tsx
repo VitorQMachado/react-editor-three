@@ -17,9 +17,11 @@ export const InputActionsModal = ({
     onClose,
     gameComponent,
 }: InputActionsModalProps): React.ReactElement | null => {
-    const { setActionBindingItem, setActionCallbackByComponentItem, persistActionMaps } =
-        useInputActionHandlers(gameComponent as any);
-    const { actionMaps, currentActionMapName, currentActionMap, currentActionNames } = useInputActionMaps(gameComponent);
+    const { setActionBindingItem, setActionCallbackByComponentItem, persistActionMaps } = useInputActionHandlers(
+        gameComponent as any
+    );
+    const { actionMaps, currentActionMapName, currentActionMap, currentActionNames } =
+        useInputActionMaps(gameComponent);
     const componentMethodOptions = useComponentMethodOptions(gameComponent as any);
     const [selectedActionName, setSelectedActionName] = useState<string>(DEFAULT_INPUT_ACTIONS[0]);
     const [bindingPathInput, setBindingPathInput] = useState<string>('<Keyboard>/space');

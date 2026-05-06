@@ -162,7 +162,9 @@ export const AddComponentModal = ({
                 </div>
 
                 <ul className="add-component-modal__list">
-                    {filteredComponents.length === 0 && <li className="add-component-modal__empty">No components found.</li>}
+                    {filteredComponents.length === 0 && (
+                        <li className="add-component-modal__empty">No components found.</li>
+                    )}
                     {filteredComponents.map((item) => (
                         <li key={item.name}>
                             <button

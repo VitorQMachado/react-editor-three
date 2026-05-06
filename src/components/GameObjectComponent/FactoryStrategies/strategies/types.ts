@@ -34,10 +34,7 @@ export class FactoryValueContext {
         this.strategy = strategy;
     }
 
-    public transform(
-        item: ExtendedFactoryValue,
-        context: FactoryValueStrategyContext
-    ): ExtendedFactoryValue {
+    public transform(item: ExtendedFactoryValue, context: FactoryValueStrategyContext): ExtendedFactoryValue {
         return this.strategy.transform(item, context);
     }
 }

@@ -2,7 +2,9 @@ import { FactoryValueStrategyContext, IFactoryValueStrategy, ExtendedFactoryValu
 
 export class InputCurrentActionMapStrategy implements IFactoryValueStrategy {
     canHandle(item: ExtendedFactoryValue, context: FactoryValueStrategyContext): boolean {
-        return context.gameComponent?.NAME === 'InputComponent' && /^Current Action Map$/i.test(String(item?.name || ''));
+        return (
+            context.gameComponent?.NAME === 'InputComponent' && /^Current Action Map$/i.test(String(item?.name || ''))
+        );
     }
 
     transform(item: ExtendedFactoryValue, context: FactoryValueStrategyContext): ExtendedFactoryValue {

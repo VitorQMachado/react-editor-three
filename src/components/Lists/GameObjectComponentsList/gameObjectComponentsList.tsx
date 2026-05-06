@@ -1,10 +1,4 @@
-import {
-    EventStream,
-    GameComponent,
-    GameManager,
-    GameObject,
-    IGameObjectUpdatedPayload,
-} from '@vmlibs/unit_three';
+import { EventStream, GameComponent, GameManager, GameObject, IGameObjectUpdatedPayload } from '@vmlibs/unit_three';
 import { useEffect, useState } from 'react';
 import { GameObjectComponent } from '../../GameObjectComponent/GameObjectComponent';
 import { AddComponentModal } from '../../Modals/AddComponentModal';
@@ -111,11 +105,7 @@ export const GameObjectComponentsList = ({ gameManager }: { gameManager: GameMan
                 <ComponentEventLogSection />
             </div>
 
-            <AddComponentModal
-                isOpen={modalOpen}
-                onClose={closeModal}
-                gameManager={gameManager}
-            />
+            <AddComponentModal isOpen={modalOpen} onClose={closeModal} gameManager={gameManager} />
         </>
     );
 };

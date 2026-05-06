@@ -16,8 +16,7 @@ export const useInputActionHandlers = (gameComponent: AnyGameComponent) => {
     );
 
     const setActionCallbackByComponentItem = useMemo(
-        () =>
-            factoryValuesList.find((item) => /^Set Action Callback By Component$/i.test(String(item?.name || ''))),
+        () => factoryValuesList.find((item) => /^Set Action Callback By Component$/i.test(String(item?.name || ''))),
         [factoryValuesList]
     );
 

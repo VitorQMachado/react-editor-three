@@ -1,11 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import ComponentInputFactory from './InputFactory';
+import { InputConfigurationSection } from './InputConfigurationSection';
 import { getOriginalPathForBlob } from '../../services';
-import {
-    buildGroupedFactoryRows,
-    isRotationAxisItem,
-    type GroupedFactoryRow,
-} from '../GameObjectComponent/helpers';
+import { buildGroupedFactoryRows, isRotationAxisItem, type GroupedFactoryRow } from '../GameObjectComponent/helpers';
 import {
     CAMERA_FOLLOW_MODE_OPTIONS,
     DEG_TO_RAD,
@@ -24,6 +21,7 @@ type GroupedFactoryFieldsProps = {
 
 export const GroupedFactoryFields = ({ gameComponent }: GroupedFactoryFieldsProps): React.ReactElement => {
     const [registeredActionCallbackNames, setRegisteredActionCallbackNames] = useState<string[]>([]);
+    const isInputComponent = gameComponent?.NAME === 'InputComponent';
     const { actionMapNames, currentActionMapName, currentActionNames } = useInputActionMaps(gameComponent);
 
     const callbackNameOptions = useMemo(() => registeredActionCallbackNames, [registeredActionCallbackNames]);
@@ -80,36 +78,39 @@ export const GroupedFactoryFields = ({ gameComponent }: GroupedFactoryFieldsProp
 
     return (
         <>
-            {groupedRows.map((row) => {
-                if (row.type === 'single') {
+            {isInputComponent && <InputConfigurationSection gameComponent={gameComponent} />}
+
+            {!isInputComponent &&
+                groupedRows.map((row) => {
+                    if (row.type === 'single') {
+                        return (
+                            <div key={row.item.name} className="inspector-component__field">
+                                <label className="inspector-component__field-label">{row.item.name}</label>
+                                <ComponentInputFactory item={row.item} />
+                            </div>
+                        );
+                    }
+
                     return (
-                        <div key={row.item.name} className="inspector-component__field">
-                            <label className="inspector-component__field-label">{row.item.name}</label>
-                            <ComponentInputFactory item={row.item} />
+                        <div key={row.label} className="inspector-component__field inspector-component__field--xyz">
+                            <label className="inspector-component__field-label">{row.label}</label>
+                            <div className="inspector-component__xyz-inputs">
+                                <div className="inspector-component__xyz-input">
+                                    <label className="inspector-vector-inputs__label">X</label>
+                                    <ComponentInputFactory item={row.x} />
+                                </div>
+                                <div className="inspector-component__xyz-input">
+                                    <label className="inspector-vector-inputs__label">Y</label>
+                                    <ComponentInputFactory item={row.y} />
+                                </div>
+                                <div className="inspector-component__xyz-input">
+                                    <label className="inspector-vector-inputs__label">Z</label>
+                                    <ComponentInputFactory item={row.z} />
+                                </div>
+                            </div>
                         </div>
                     );
-                }
-
-                return (
-                    <div key={row.label} className="inspector-component__field inspector-component__field--xyz">
-                        <label className="inspector-component__field-label">{row.label}</label>
-                        <div className="inspector-component__xyz-inputs">
-                            <div className="inspector-component__xyz-input">
-                                <label className="inspector-vector-inputs__label">X</label>
-                                <ComponentInputFactory item={row.x} />
-                            </div>
-                            <div className="inspector-component__xyz-input">
-                                <label className="inspector-vector-inputs__label">Y</label>
-                                <ComponentInputFactory item={row.y} />
-                            </div>
-                            <div className="inspector-component__xyz-input">
-                                <label className="inspector-vector-inputs__label">Z</label>
-                                <ComponentInputFactory item={row.z} />
-                            </div>
-                        </div>
-                    </div>
-                );
-            })}
+                })}
         </>
     );
 };

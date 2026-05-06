@@ -3,7 +3,10 @@ import { FactoryValueStrategyContext, IFactoryValueStrategy, ExtendedFactoryValu
 
 export class InputSetActionCallbackByNameStrategy implements IFactoryValueStrategy {
     canHandle(item: ExtendedFactoryValue, context: FactoryValueStrategyContext): boolean {
-        return context.gameComponent?.NAME === 'InputComponent' && /^Set Action Callback By Name$/i.test(String(item?.name || ''));
+        return (
+            context.gameComponent?.NAME === 'InputComponent' &&
+            /^Set Action Callback By Name$/i.test(String(item?.name || ''))
+        );
     }
 
     transform(item: ExtendedFactoryValue, context: FactoryValueStrategyContext): ExtendedFactoryValue {
