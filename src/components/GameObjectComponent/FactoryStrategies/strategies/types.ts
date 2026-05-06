@@ -22,3 +22,22 @@ export interface IFactoryValueStrategy {
     canHandle(item: ExtendedFactoryValue, context: FactoryValueStrategyContext): boolean;
     transform(item: ExtendedFactoryValue, context: FactoryValueStrategyContext): ExtendedFactoryValue;
 }
+
+export class FactoryValueContext {
+    private strategy: IFactoryValueStrategy;
+
+    constructor(strategy: IFactoryValueStrategy) {
+        this.strategy = strategy;
+    }
+
+    public setStrategy(strategy: IFactoryValueStrategy): void {
+        this.strategy = strategy;
+    }
+
+    public transform(
+        item: ExtendedFactoryValue,
+        context: FactoryValueStrategyContext
+    ): ExtendedFactoryValue {
+        return this.strategy.transform(item, context);
+    }
+}

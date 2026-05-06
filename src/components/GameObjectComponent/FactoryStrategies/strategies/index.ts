@@ -8,4 +8,5 @@ export { InputDispatchRegisteredEventStrategy } from './InputDispatchRegisteredE
 export { InputSetActionCallbackByComponentStrategy } from './InputSetActionCallbackByComponentStrategy';
 export { ColliderBoundsStrategy } from './ColliderBoundsStrategy';
 export { RotationAxisStrategy } from './RotationAxisStrategy';
+export { FactoryValueContext } from './types';
 export type { ExtendedFactoryValue, FactoryValueStrategyContext, IFactoryValueStrategy } from './types';

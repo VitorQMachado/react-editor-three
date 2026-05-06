@@ -1,6 +1,7 @@
 import {
     CameraFollowModeStrategy,
     ColliderBoundsStrategy,
+    FactoryValueContext,
     InputCurrentActionMapStrategy,
     InputDispatchRegisteredEventStrategy,
     InputSetActionBindingStrategy,
@@ -36,7 +37,8 @@ export const transformFactoryValue = (
         return item;
     }
 
-    return matchingStrategy.transform(item, context);
+    const ctx = new FactoryValueContext(matchingStrategy);
+    return ctx.transform(item, context);
 };
 
 export const shouldIncludeFactoryItem = (componentName: string, itemName: string): boolean => {
